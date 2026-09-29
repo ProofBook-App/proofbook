@@ -76,6 +76,13 @@ Both sim vaults use $100 max trade, $500 per backer and a 10% daily loss cap. Th
 
 The Kuru sim book was funded with 4 testnet MON (`0x48a0a2a666c65fdee5c27c6c20275392e8a69dd961c9509b10b29749dd0dd87f`), which is its ask-side inventory. That covers buys of about $0.10 at $0.027 per MON. Send it more MON for bigger buys; sells never need inventory.
 
+**First Kuru sim round trip**, through vault #1954, KuruAdapter and SimKuruOrderBook. The book held 9 MON at this point.
+
+- A 50 simUSDC deposit (`0xb737e71916727533c785dbb63b692c5661d91d21b0e6ddf24d7a169a50a00764`).
+- A 0.20 simUSDC buy for 7.3508 MON (`0xfd173290b1dd304e0239145cccbc85100c36b05f498da3161dedf85c1ca643e2`).
+- A sell of all 7.3508 MON (`0xa685b70bd44a467c409405f81007448376a12072479c4354b4eab1eca550103a`).
+- Final NAV is 49.999735: the round trip cost 0.000265 in spread.
+
 ## Deploying
 
 ```bash
