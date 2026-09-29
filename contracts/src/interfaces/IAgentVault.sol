@@ -9,7 +9,9 @@ interface IAgentVault {
 
     /// @dev Every state change emits (invariant 7). Adding an event here means updating
     /// indexer/schema.graphql in the same PR.
-    event Executed(address indexed venue, uint256 notionalIn, uint256 notionalOut, uint256 navBefore, uint256 navAfter);
+    /// @param notional What the adapter quoted for this action (checked against maxTradeNotional).
+    /// @param venueDelta The adapter's own attribution of the NAV change (informational).
+    event Executed(address indexed venue, uint256 notional, int256 venueDelta, uint256 navBefore, uint256 navAfter);
     event PolicyBreach(BreachReason reason, uint256 nav, uint256 dayStartNav);
     event Frozen(address indexed by);
     event Unfrozen(address indexed by);
@@ -19,6 +21,9 @@ interface IAgentVault {
 
     error NotSessionKey(address caller);
     error NotOwnerOrGuardian(address caller);
+    error NotAgentOwner(address caller);
+    error InvalidSessionKey();
+    error NotFrozen();
     error VenueNotAllowed(address venue);
     error TradeTooLarge(uint256 notional, uint256 maxTradeNotional);
     error VaultFrozen();

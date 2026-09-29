@@ -4,71 +4,307 @@ pragma solidity ^0.8.24;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IAgentVault} from "./interfaces/IAgentVault.sol";
+import {IAgentRegistry, RiskEnvelope} from "./interfaces/IAgentRegistry.sol";
+import {IVenueAdapter} from "./interfaces/IVenueAdapter.sol";
 
-/// @notice Skeleton. Implemented after the spec §6 invariant tests exist (tests first).
-contract AgentVault is ERC4626, IAgentVault {
-    error NotImplemented();
+/// @title AgentVault
+/// @notice One ERC-4626 vault per agent. Backers deposit the vault asset (AUSD by default);
+/// the agent's session key trades it through allowlisted venue adapters under an onchain policy.
+/// UNAUDITED. See the README threat model.
+///
+/// - NAV = idle asset balance + sum of venue exposures. totalAssets() is NAV minus the pending
+///   performance fee, so every ERC-4626 conversion is already net of fee.
+/// - Adapters are called with CALL, never DELEGATECALL. For each execute the vault approves the
+///   adapter for exactly the quoted notional and clears the approval afterwards.
+/// - A daily-loss breach does not revert: the trade stands and the vault freezes in the same tx.
+contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
+    using SafeERC20 for IERC20;
+    using Math for uint256;
 
-    constructor(IERC20 asset_, string memory name_, string memory symbol_) ERC20(name_, symbol_) ERC4626(asset_) {}
+    uint256 public constant FEE_BPS = 1_000; // 10% of profit above the high-water mark
+    uint256 public constant UNFREEZE_COOLDOWN = 1 days;
+    uint256 internal constant BPS = 10_000;
+    uint256 internal constant PRICE_SCALE = 1e18; // high-water mark = assets * 1e18 / shares
+    uint8 internal constant DECIMALS_OFFSET = 6;
 
-    /// @dev AUSD has 6 decimals: offset shares by 1e6 against first-depositor inflation.
-    function _decimalsOffset() internal pure override returns (uint8) {
-        return 6;
+    IAgentRegistry public immutable registry;
+    uint256 public immutable agentId;
+    address public immutable guardian;
+    uint256 public immutable maxTradeNotional;
+    uint16 public immutable dailyLossCapBps;
+    uint256 public immutable depositCapPerBacker;
+
+    address public sessionKey;
+    bool public frozen;
+    uint256 public frozenAt;
+    uint256 public highWaterMark;
+    uint256 public dayStartNav;
+    /// @dev 1-based UTC day index of the open trading day; 0 until the first execute.
+    uint256 internal _currentDay;
+
+    address[] internal _venues;
+    mapping(address venue => bool) public isVenueAllowed;
+
+    modifier onlyAgentOwner() {
+        if (msg.sender != registry.ownerOf(agentId)) revert NotAgentOwner(msg.sender);
+        _;
     }
 
-    /// @dev Kuru MON-AUSD settles in native MON.
+    constructor(
+        IERC20 asset_,
+        IAgentRegistry registry_,
+        uint256 agentId_,
+        address sessionKey_,
+        address guardian_,
+        RiskEnvelope memory envelope,
+        string memory name_,
+        string memory symbol_
+    ) ERC20(name_, symbol_) ERC4626(asset_) {
+        if (sessionKey_ == address(0)) revert InvalidSessionKey();
+        registry = registry_;
+        agentId = agentId_;
+        sessionKey = sessionKey_;
+        guardian = guardian_;
+        maxTradeNotional = envelope.maxTradeNotional;
+        dailyLossCapBps = envelope.dailyLossCapBps;
+        depositCapPerBacker = envelope.depositCapPerBacker;
+        for (uint256 i; i < envelope.venues.length; ++i) {
+            address venue = envelope.venues[i];
+            if (!isVenueAllowed[venue]) {
+                isVenueAllowed[venue] = true;
+                _venues.push(venue);
+            }
+        }
+        highWaterMark = PRICE_SCALE / 10 ** DECIMALS_OFFSET; // 1 asset unit per 10^offset shares
+    }
+
+    /// @dev Kuru MON markets settle in native MON.
     receive() external payable {}
 
-    function execute(address, bytes calldata) external pure {
-        revert NotImplemented();
+    // ------------------------------------------------------------------ trading
+
+    /// @inheritdoc IAgentVault
+    function execute(address venue, bytes calldata data) external nonReentrant {
+        if (msg.sender != sessionKey) revert NotSessionKey(msg.sender);
+        if (frozen) revert VaultFrozen();
+        if (!isVenueAllowed[venue]) revert VenueNotAllowed(venue);
+
+        uint256 notional = IVenueAdapter(venue).quoteNotional(data);
+        if (notional > maxTradeNotional) revert TradeTooLarge(notional, maxTradeNotional);
+
+        _rollDay();
+        uint256 navBefore = nav();
+
+        IERC20 token = IERC20(asset());
+        token.forceApprove(venue, notional);
+        int256 venueDelta = IVenueAdapter(venue).execute(data);
+        token.forceApprove(venue, 0);
+
+        uint256 navAfter = nav();
+        emit Executed(venue, notional, venueDelta, navBefore, navAfter);
+
+        uint256 floor = dayStartNav.mulDiv(BPS - dailyLossCapBps, BPS, Math.Rounding.Ceil);
+        if (navAfter < floor) {
+            emit PolicyBreach(BreachReason.DailyLossCap, navAfter, dayStartNav);
+            _freeze(address(this));
+        }
     }
 
-    function rotateSessionKey(address) external pure {
-        revert NotImplemented();
+    // ------------------------------------------------------------------ controls
+
+    function rotateSessionKey(address next) external onlyAgentOwner {
+        if (next == address(0)) revert InvalidSessionKey();
+        emit SessionKeyRotated(sessionKey, next);
+        sessionKey = next;
     }
 
-    function freeze() external pure {
-        revert NotImplemented();
+    function freeze() external {
+        if (msg.sender != guardian && msg.sender != registry.ownerOf(agentId)) {
+            revert NotOwnerOrGuardian(msg.sender);
+        }
+        _freeze(msg.sender);
     }
 
-    function unfreeze() external pure {
-        revert NotImplemented();
+    function unfreeze() external onlyAgentOwner {
+        if (!frozen) revert NotFrozen();
+        uint256 readyAt = frozenAt + UNFREEZE_COOLDOWN;
+        if (block.timestamp < readyAt) revert UnfreezeCooldown(readyAt);
+        frozen = false;
+        _currentDay = 0; // next execute opens a fresh day at the current NAV
+        emit Unfrozen(msg.sender);
     }
 
-    function agentId() external pure returns (uint256) {
-        revert NotImplemented();
+    function _freeze(address by) internal {
+        if (frozen) return;
+        frozen = true;
+        frozenAt = block.timestamp;
+        emit Frozen(by);
     }
 
-    function sessionKey() external pure returns (address) {
-        revert NotImplemented();
+    // ------------------------------------------------------------------ accounting views
+
+    /// @notice Gross NAV: idle balance plus every allowlisted venue's reported exposure.
+    function nav() public view returns (uint256 total) {
+        total = IERC20(asset()).balanceOf(address(this));
+        for (uint256 i; i < _venues.length; ++i) {
+            total += IVenueAdapter(_venues[i]).exposure(address(this));
+        }
     }
 
-    function guardian() external pure returns (address) {
-        revert NotImplemented();
+    /// @notice NAV net of the performance fee owed on profit above the high-water mark.
+    function totalAssets() public view override returns (uint256) {
+        return nav() - pendingFee();
     }
 
-    function frozen() external pure returns (bool) {
-        revert NotImplemented();
+    function pendingFee() public view returns (uint256) {
+        uint256 supply = totalSupply();
+        if (supply == 0) return 0;
+        uint256 gross = nav();
+        uint256 atHwm = supply.mulDiv(highWaterMark, PRICE_SCALE);
+        if (gross <= atHwm) return 0;
+        return (gross - atHwm).mulDiv(FEE_BPS, BPS);
     }
 
-    function nav() external pure returns (uint256) {
-        revert NotImplemented();
+    function dayStart() external view returns (uint256) {
+        return _currentDay == 0 ? 0 : (_currentDay - 1) * 1 days;
     }
 
-    function dayStart() external pure returns (uint256) {
-        revert NotImplemented();
+    function venues() external view returns (address[] memory) {
+        return _venues;
     }
 
-    function dayStartNav() external pure returns (uint256) {
-        revert NotImplemented();
+    // ------------------------------------------------------------------ ERC-4626 limits
+
+    /// @dev The cap applies to the receiver's position value after the deposit.
+    function maxDeposit(address receiver) public view override returns (uint256) {
+        if (frozen) return 0;
+        uint256 held = _convertToAssets(balanceOf(receiver), Math.Rounding.Ceil);
+        return held >= depositCapPerBacker ? 0 : depositCapPerBacker - held;
     }
 
-    function highWaterMark() external pure returns (uint256) {
-        revert NotImplemented();
+    function maxMint(address receiver) public view override returns (uint256) {
+        return _convertToShares(maxDeposit(receiver), Math.Rounding.Floor);
     }
 
-    function isVenueAllowed(address) external pure returns (bool) {
-        revert NotImplemented();
+    /// @dev Withdrawals are limited only by what is idle in the vault, never by `frozen`.
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        uint256 owned = _convertToAssets(balanceOf(owner), Math.Rounding.Floor);
+        uint256 idle = IERC20(asset()).balanceOf(address(this)) - _unpaidFeeCash();
+        return owned < idle ? owned : idle;
+    }
+
+    function maxRedeem(address owner) public view override returns (uint256) {
+        uint256 shares = balanceOf(owner);
+        uint256 idle = IERC20(asset()).balanceOf(address(this)) - _unpaidFeeCash();
+        // Compare in assets so a full exit from an all-idle vault is never blocked by rounding.
+        if (_convertToAssets(shares, Math.Rounding.Floor) <= idle) return shares;
+        return _convertToShares(idle, Math.Rounding.Floor);
+    }
+
+    // ------------------------------------------------------------------ ERC-4626 entry points
+
+    function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256 shares) {
+        if (frozen) revert VaultFrozen();
+        _takeFee();
+        _checkCap(receiver, assets);
+        shares = previewDeposit(assets);
+        _deposit(_msgSender(), receiver, assets, shares);
+        _onInflow(assets);
+    }
+
+    function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256 assets) {
+        if (frozen) revert VaultFrozen();
+        _takeFee();
+        assets = previewMint(shares);
+        _checkCap(receiver, assets);
+        _deposit(_msgSender(), receiver, assets, shares);
+        _onInflow(assets);
+    }
+
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override
+        nonReentrant
+        returns (uint256 shares)
+    {
+        _takeFee();
+        uint256 maxAssets = maxWithdraw(owner);
+        if (assets > maxAssets) revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
+        shares = previewWithdraw(assets);
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        _onOutflow(assets);
+    }
+
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override
+        nonReentrant
+        returns (uint256 assets)
+    {
+        _takeFee();
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        assets = previewRedeem(shares);
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        _onOutflow(assets);
+    }
+
+    // ------------------------------------------------------------------ internals
+
+    function _decimalsOffset() internal pure override returns (uint8) {
+        return DECIMALS_OFFSET;
+    }
+
+    function _checkCap(address receiver, uint256 assets) internal view {
+        uint256 room = maxDeposit(receiver);
+        if (assets > room) {
+            revert DepositCapExceeded(receiver, depositCapPerBacker - room + assets, depositCapPerBacker);
+        }
+    }
+
+    /// @dev Crystallise the fee on profit above the high-water mark, then raise the mark.
+    /// Runs before every deposit and withdrawal, so entrants never pay for profit made before
+    /// they joined and the same profit is never charged twice. If the fee is not idle in the
+    /// vault (it sits at a venue), it stays pending and totalAssets keeps it netted out.
+    function _takeFee() internal {
+        uint256 fee = pendingFee();
+        if (fee == 0) return;
+        IERC20 token = IERC20(asset());
+        if (token.balanceOf(address(this)) < fee) return;
+
+        address to = registry.ownerOf(agentId);
+        token.safeTransfer(to, fee);
+        _onOutflow(fee);
+        highWaterMark = nav().mulDiv(PRICE_SCALE, totalSupply()); // gross price after paying the fee
+        emit FeeTaken(to, fee, highWaterMark);
+    }
+
+    /// @dev Fee that is owed but could not be paid yet; kept out of what backers can withdraw.
+    function _unpaidFeeCash() internal view returns (uint256) {
+        uint256 fee = pendingFee();
+        uint256 bal = IERC20(asset()).balanceOf(address(this));
+        return fee < bal ? fee : bal;
+    }
+
+    /// @dev Open a new trading day on the first execute after a UTC day boundary.
+    function _rollDay() internal {
+        uint256 today = block.timestamp / 1 days + 1;
+        if (today == _currentDay) return;
+        _currentDay = today;
+        dayStartNav = nav();
+        emit DayRolled((today - 1) * 1 days, dayStartNav);
+    }
+
+    /// @dev Flows move the day's baseline so they never count as trading gains or losses.
+    function _onInflow(uint256 assets) internal {
+        if (_currentDay != 0) dayStartNav += assets;
+    }
+
+    function _onOutflow(uint256 assets) internal {
+        if (_currentDay != 0) dayStartNav = assets >= dayStartNav ? 0 : dayStartNav - assets;
     }
 }
