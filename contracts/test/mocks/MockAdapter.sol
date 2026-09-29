@@ -1,31 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IVenueAdapter} from "../../src/interfaces/IVenueAdapter.sol";
+import {MockAUSD} from "./MockAUSD.sol";
 
-/// @notice Test-controlled venue. `data` = abi.encode(uint256 notional, int256 navDelta).
-/// execute() moves the caller's exposure by navDelta, so tests can script gains and losses.
-/// setExposure() fakes a manipulated mark (e.g. a pushed Kuru mid).
+/// @notice Test-controlled venue. `data` = abi.encode(uint256 notional, int256 pnl).
+/// execute() realises `pnl` in the calling vault's own asset: a gain is minted to the vault,
+/// a loss is burned from it. So PnL shows up in real balances, not only in bookkeeping.
+/// setExposure() fakes value held at the venue (e.g. a position marked at a pushed Kuru mid).
 contract MockAdapter is IVenueAdapter {
     mapping(address vault => uint256) public exposureOf;
-
-    function encode(uint256 notional, int256 navDelta) external pure returns (bytes memory) {
-        return abi.encode(notional, navDelta);
-    }
 
     function quoteNotional(bytes calldata data) external pure returns (uint256 notional) {
         (notional,) = abi.decode(data, (uint256, int256));
     }
 
-    function execute(bytes calldata data) external returns (int256 navDelta) {
-        (, navDelta) = abi.decode(data, (uint256, int256));
-        uint256 current = exposureOf[msg.sender];
-        if (navDelta >= 0) {
-            exposureOf[msg.sender] = current + uint256(navDelta);
-        } else {
-            uint256 loss = uint256(-navDelta);
-            exposureOf[msg.sender] = loss > current ? 0 : current - loss;
-        }
+    function execute(bytes calldata data) external returns (int256 pnl) {
+        (, pnl) = abi.decode(data, (uint256, int256));
+        MockAUSD token = MockAUSD(IERC4626(msg.sender).asset());
+        if (pnl > 0) token.mint(msg.sender, uint256(pnl));
+        else if (pnl < 0) token.burn(msg.sender, uint256(-pnl));
     }
 
     function exposure(address vault) external view returns (uint256) {
