@@ -18,6 +18,7 @@ Domain: `proofbook.app` (Cloudflare Registrar, served by the web Worker). GitHub
 - `docs/reference/monad.md`: RPCs, explorers, verification, EVM differences, canonical addresses (AUSD, ERC-8004, Multicall3…)
 - `docs/reference/kuru.md`, `docs/reference/perpl.md`: venue contracts, ABIs, known docs-vs-ABI mismatches
 - `docs/reference/erc-8004.md`: IdentityRegistry interface and how Proofbook uses it
+- `docs/reference/metamask.md`: Agent Wallet (`mm`) chain support and our Guard-mode server wallet
 - `docs/reference/hackathon.md`: deadline, rules, judging weights, bounty list, submission form
 - `.claude/rules/`: per-package rules that load automatically when working in `contracts/`, `indexer/`, `web/`, `agents|cli|plugin/`
 

@@ -24,7 +24,7 @@ These are Day 0 items where the spec and the research disagree, or where facts a
 - [x] Read the logged-in /tracks bounty cards (2026-09-29, firsthand; see spec §7 and `reference/hackathon.md`) and the Rules v3.0 modal. All relevant cards are captured, and Alchemy is All tracks. Rules v3.0 were read firsthand on 2026-09-29 and summarized in `reference/hackathon.md`. Update spec §9, which still says v2.0.
 - [x] Is Kuru mainnet still v1, or has v2 (AccountCore) shipped? Still v1 (2026-09-29). v2 is testnet-only, so recheck before the demo.
 - [x] Read `IExchange.sol` in PerplFoundation/delegated-account. Write a fork test for create → deposit → order → withdraw from a contract. **Yes: a contract can own a Perpl account** (fork spike passed 2026-09-29; see `reference/perpl.md`). Build PerplAdapter.
-- [x] `mm login` done 2026-09-29. `mm chains list` now says `NOT_INITIALIZED`: run `mm init` (wallet setup, human only), then list chains. Run `mm chains list` to confirm the MetaMask Agent Wallet supports Monad. **Yes, per `@metamask/agent-wallet` 7.0.0** (installed 2026-09-29 under Node 24): its catalog lists `eip155:143` Monad, and the CHANGELOG says `mm wallet balance`, `tx history`, `swap`, `perps` and `transfer` support Monad (#266, #318, #405). The live list is server-driven, so run `mm chains list` after `mm login` to see it firsthand.
+- [x] MetaMask Agent Wallet supports Monad, **confirmed firsthand** 2026-09-29: the live `mm chains list` has `eip155:143` Monad (relay supported, swap) and `eip155:10143` Monad Testnet. Server Wallet in Guard mode set up; see `reference/metamask.md`.
 - [x] Confirm the repo must be readable by `metropolis@hackathon.monad.xyz`. Yes, per the Track 01 deliverables. A public repo satisfies this.
 
 ## Environment

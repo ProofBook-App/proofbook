@@ -133,7 +133,7 @@ Status: ✅ done · 🟡 in progress / waiting on the human · ⬜ not started
 - ✅ Registered on hackathon.monad.xyz. Team of one. Project "Proofbook" created, with **Track 01** and 9 bounties selected (Agora mobile trading, Perpl API, Kuru consumer, MetaMask plugin, Mera UX, Privy, Envio, Kimi, Alchemy). Repo URL and description are on the portal.
 - ✅ Read all bounty cards and Rules v3.0 firsthand (§7, `docs/reference/hackathon.md`).
 - ✅ Decisions: Track 01; Mera for backers and Privy server wallets for house agents; vault asset per vault, AUSD by default.
-- ✅ Spikes: a contract can own a Perpl account (fork test). Kuru `minSize` applies only to limit orders, and MON-AUSD is dead while MON-USDC is live. `mm` 7.0.0 supports Monad.
+- ✅ Spikes: a contract can own a Perpl account (fork test). Kuru `minSize` applies only to limit orders, and MON-AUSD is dead while MON-USDC is live. `mm` 7.0.0 supports Monad (confirmed on the live chain list after `mm init`; Guard-mode server wallet set up).
 - ✅ Repo scaffold: public repo https://github.com/ProofBook-App/proofbook, Foundry project, pnpm workspace root, CI, MIT licence. Domain `proofbook.app` bought.
 - ✅ Toolchain: Foundry 1.8.3, Node 24, pnpm 10, Docker, `mm` 7.0.0.
 - ✅ Invariant tests (§6): 30 tests, Claude-drafted, approved by the human on 2026-09-29. AgentRegistry + AgentVault implemented: **30/30 green** (also under the CI fuzz profile). The fuzz-bound fix in `testFuzz_Inv4` was approved and applied by the human's instruction.
