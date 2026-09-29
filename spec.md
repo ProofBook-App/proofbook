@@ -28,13 +28,13 @@ Pitch line: "Every trading bot asks you to trust it. Proofbook makes agents prov
 4. **Venue adapters** — `KuruAdapter` (onchain CLOB, spot). `PerplAdapter` (perps) if the integration path is confirmed on Day 0 (see Risks).
 5. **Indexer** — Envio HyperIndex over registry, vaults, fills, policy events. Produces per-agent: realised PnL, max drawdown, policy adherence, open exposure, backer count, TVL.
 6. **Web app** — leaderboard, agent profile (track record, policy status, live positions), deposit/withdraw with Mera passkeys and signing sessions, "enter your agent" page.
-7. **Risk dashboard** — per-agent exposure, drawdown vs envelope, breach history. This is the Perpl "analytics/risk tool" bounty artefact.
+7. **Agent risk panel** — per-agent exposure, drawdown vs envelope and breach history, on the agent profile. (Not entered for Perpl's analytics bounty: that brief asks for a full protocol-and-wallet analytics product.)
 8. **House agents** — 3 to 5 simple, honest strategies (momentum, mean reversion, random-walk control) running on Qwen/Kimi credits for the reasoning layer, trading tiny size on mainnet from Day 2 so the board is alive.
 9. **CLI + MetaMask Agent Wallet plugin** — `proofbook agent create|fund|run|freeze`. Plugin wraps the CLI so any external agent can enter in under ten minutes.
 10. **Submission artefacts** — README with MIT licence, AI-tooling disclosure, architecture, contract addresses, tx hashes, per-bounty checklist; 3-minute video.
 
 ### Stretch (only if on schedule by end of Day 5)
-- **SessionPool** — parimutuel "which agent finishes today's session up the most" pool, settled from indexed PnL. This is the Track 3 hook. One contract, ~150 lines.
+- **SessionPool** — parimutuel "which agent finishes today's session up the most" pool, settled from indexed PnL. One contract, ~150 lines. (It was the Track 3 hook; with Track 01 it is optional flavour only.)
 - Nansen labels on counterparties/leaderboard ($5k bounty) if their API is a single afternoon.
 
 ### Explicitly out
@@ -83,7 +83,7 @@ State: `agentId`, `sessionKey`, `policy {maxTradeNotional, dailyLossCap, venueAl
 ### Adapters
 - `IVenueAdapter { function execute(bytes calldata) external returns (int256 navDelta); function exposure(address vault) external view returns (uint256); }`
 - `KuruAdapter`: place/cancel limit and market orders on Kuru CLOB from the vault's balance.
-- `PerplAdapter`: only if Perpl supports contract-owned margin accounts (Day 0 spike). Otherwise Perpl participation is read-only via the risk dashboard.
+- `PerplAdapter`: confirmed feasible by the Day 0 fork spike (a contract owns the Perpl account directly). See `docs/reference/perpl.md` for the ABI and gotchas (`maxNegPnlCollatBPS`, withdrawal rate limit, admin powers).
 
 ### SessionPool (stretch)
 - `openSession(agentIds[], endsAt)`, `bet(sessionId, agentId)` in AUSD, `settle(sessionId)` from an indexer-signed result (single signer for hackathon, documented as such), pro-rata payout minus 2% to protocol.
@@ -123,23 +123,33 @@ Bounty scoring is 40% adherence to the published brief. Read every brief on hack
 **Track 01 deliverables** (from the track page, beyond Rules §4): logo (≤3 MB), a public repo **accessible by metropolis@hackathon.monad.xyz**, a technical demo of ≤3 min, a **pitch video of ≤2 min**, a live product link with judge access instructions and test credentials, and an optional ≤30 s ad.
 **Track 01 judging:** technical execution 20%, design & craft 20%, originality 15%, **founder & market readiness 25%** (name a specific first user), traction & path forward 20%.
 
-## 8. Day plan (Oct 5 → Oct 13)
+## 8. Day plan (revised 2026-09-29; the build window opened Sep 1, so we start now instead of Oct 5)
 
-**Day 0 (this week, before Oct 5)**
-- Register on hackathon.monad.xyz; pick a community if entering as a team; read all bounty briefs into §7.
-- Mainnet wallet funded with MON + AUSD. Kuru and Perpl API/SDK access. Envio, Privy, Mera, Alchemy, Kimi accounts.
-- Spike: can a contract own a Perpl margin account / sign Perpl orders? Decide PerplAdapter vs read-only.
-- Repo scaffold: Foundry + pnpm monorepo (`contracts/`, `agents/`, `indexer/`, `web/`, `cli/`, `plugin/`), this file as `CLAUDE.md`, CI running tests.
+Status: ✅ done · 🟡 in progress / waiting on the human · ⬜ not started
 
-**Day 1 (Oct 5)** — Contracts: Registry, Vault, policy, session keys. Invariant tests (§6) green. Local fork.
-**Day 2** — KuruAdapter (+ PerplAdapter if confirmed). Deploy to mainnet. First house agent trading $20–50 at tiny size. Addresses + tx hashes into README immediately.
-**Day 3** — Envio indexer + GraphQL. Workers API + D1 snapshot. Two more house agents.
-**Day 4** — Web app: leaderboard, agent profile, deposit/withdraw with Mera, "enter your agent" page.
-**Day 5** — Risk dashboard. CLI. MetaMask plugin. Checkpoint: on schedule → stretch tomorrow; behind → cut to core.
-**Day 6** — SessionPool (stretch) or buffer/polish.
-**Day 7** — README (licence, AI disclosure, architecture, addresses, hashes, §7 filled), security pass on the vault, open-source clean-up.
-**Day 8 (Oct 12)** — Storyboard + record 3-minute video. Submit. Confirm submission is editable until deadline.
-**Day 9 (Oct 13)** — Buffer only. Fix anything a judge could trip on. Do not add features.
+**Day 0 (now → Oct 4)**
+- ✅ Registered on hackathon.monad.xyz. Team of one. Project "Proofbook" created, with **Track 01** and 9 bounties selected (Agora mobile trading, Perpl API, Kuru consumer, MetaMask plugin, Mera UX, Privy, Envio, Kimi, Alchemy). Repo URL and description are on the portal.
+- ✅ Read all bounty cards and Rules v3.0 firsthand (§7, `docs/reference/hackathon.md`).
+- ✅ Decisions: Track 01; Mera for backers and Privy server wallets for house agents; vault asset per vault, AUSD by default.
+- ✅ Spikes: a contract can own a Perpl account (fork test). Kuru `minSize` applies only to limit orders, and MON-AUSD is dead while MON-USDC is live. `mm` 7.0.0 supports Monad.
+- ✅ Repo scaffold: public repo https://github.com/ProofBook-App/proofbook, Foundry project, pnpm workspace root, CI, MIT licence. Domain `proofbook.app` bought.
+- ✅ Toolchain: Foundry 1.8.3, Node 24, pnpm 10, Docker, `mm` 7.0.0.
+- 🟡 Invariant tests (§6) drafted by Claude at the human's request, 30 tests, red. **Human review pending**, then implement AgentRegistry + AgentVault until green.
+- ⬜ Spikes: Mera SDK in React Router v7 on Workers (passkey login, signing session, fresh-device rebuild); Privy server wallet with policy signing on chain 143; Kimi K2.6 tool calls on Workers AI.
+- ⬜ Accounts and keys: Privy app, Mera, Envio, Alchemy, Cloudflare API token. Mainnet wallets funded with MON (10 MON reserve plus headroom), AUSD and a little USDC.
+- ⬜ Post the first progress update on the portal (unlocks mentor support). Register an X handle.
+
+**Day 1 (Oct 5)** — PerplAdapter (from the spike) + KuruAdapter (MON-USDC market orders), each fork-tested. Deploy to testnet, then mainnet **after human approval**. Addresses and tx hashes go into the README immediately.
+**Day 2** — House agents: Kimi K2.6 via Workers AI, session keys in Privy server wallets with policy. First honest house agent trading $20–50 on Perpl. Plainly labelled.
+**Day 3** — Envio HyperIndex indexer (registry, vaults, Perpl/Kuru fills) + Workers API + D1 snapshot. Two more house agents.
+**Day 4** — Web PWA: landing, leaderboard, agent profile, Mera onboarding (one passkey ceremony), deposit/withdraw with signing sessions, AUSD balance, "enter your agent". This covers the Agora demo path: passkey → AUSD → Perpl trade.
+**Day 5** — CLI (`proofbook agent create|fund|run|freeze`) + MetaMask Agent Wallet plugin (`skills/<name>/SKILL.md`, every tx through the Agent Wallet). **Checkpoint:** on schedule → Day 6 polish and stretch; behind → cut Kuru UI and Nansen.
+**Day 6** — Mera UX polish (time-to-first-tx, session expiry, stateless test), SEO/OG images, Kuru bounty evidence (named users, retention plan), Kimi blog post draft.
+**Day 7** — README (licence, AI disclosure, architecture, addresses, hashes, threat model including Perpl admin powers), vault security pass, logo (≤3 MB).
+**Day 8 (Oct 12)** — Record the 3-min technical demo + the **2-min pitch video** (+ optional 30 s ad). Publish the Kimi post. Fill every bounty's submission fields. Submit (editable until the deadline).
+**Day 9 (Oct 13)** — Buffer only. Fix anything a judge could trip on. No new features. Deadline 2026-10-14T03:59Z.
+
+**Throughout:** the marketer recruits real backers and builders. Track 01 scores founder & market readiness at 25% and traction at 20%, and Kuru scores evidence of user demand.
 
 ## 9. Submission non-negotiables (from Rules v2.0)
 
@@ -153,9 +163,9 @@ Bounty scoring is 40% adherence to the published brief. Read every brief on hack
 
 ## 10. Risks and the pre-decided answer
 
-- **Perpl can't be driven from a contract** → PerplAdapter dropped; Perpl bounties pursued via risk dashboard + read-only API integration.
+- **Perpl can't be driven from a contract**: resolved. The fork spike passed. Remaining risk: Perpl admin can freeze or whitelist accounts, and withdrawals are rate-limited. Document both in the threat model.
 - **Kuru SDK friction** → fall back to direct contract calls against Kuru's onchain CLOB; it is fully onchain by design.
-- **Behind at Day 5 checkpoint** → cut SessionPool, Nansen, Mera. Switch entry to Track 4 if the story is more "agent infra" than "culture" by then.
+- **Behind at Day 5 checkpoint** → cut SessionPool, Nansen and the Kuru UI (keep KuruAdapter). Mera stays: the $10k Agora bounty depends on it.
 - **Vault security** → deposit caps, guardian freeze, and a written threat model in README. Say what is not audited.
 - **Time** → evenings + both weekends; recruit one person for frontend + video by Day 2 at the latest.
 
