@@ -37,7 +37,8 @@ _Draft; full write-up on Day 7._
 - **Unaudited.** AgentRegistry, AgentVault and PerplAdapter have not been audited.
 - **Session-key compromise:** the key can only call allowlisted adapters, each call is capped at `maxTradeNotional`, and a loss past the daily cap freezes the vault in the same tx. Within those limits it can still trade badly.
 - **Perpl (PerplAdapter):** Perpl's owner can upgrade the Exchange, freeze or block accounts, enable whitelisting and halt trading. Withdrawals are rate-limited exchange-wide. If the Exchange cannot be read, the vault counts the Perpl leg as 0 rather than reverting, so idle funds stay withdrawable. Positions are valued at Perpl's mark with no exit fee deducted. The per-trade cap does not limit the sum of resting orders. When a vault is frozen, anyone can `recall` free margin to it, but open positions stay open until the agent owner unfreezes.
-- _TODO: NAV/mark manipulation on Kuru, guardian powers, fee edge cases._
+- **Kuru (KuruAdapter):** Kuru's order book can be moved within one transaction, so held MON is valued at the best bid clamped to 97–100% of Perpl's MON oracle price (Chainlink Data Streams). A spoofed high bid cannot inflate NAV; a dumped book moves it by at most 3%. Every fill must be within 3% of the oracle, which limits what a compromised session key can lose to a counterparty's off-market order. If the oracle is stale, Kuru trades stop and held MON counts as 0. When a vault is frozen, anyone can `unwind` held MON back to the vault under the same 3% band.
+- _TODO: guardian powers, fee edge cases._
 
 ## AI tooling disclosure
 
@@ -45,7 +46,7 @@ This project is built with Claude Code (Anthropic). The human writes the spec an
 
 ## Pre-existing code
 
-None. Third-party dependencies: OpenZeppelin Contracts v5.7.0, forge-std. `IPerplExchange` re-declares the Perpl Exchange ABI subset the adapter calls (written by us; Perpl's own interface file is not included).
+None. Third-party dependencies: OpenZeppelin Contracts v5.7.0, forge-std. `IPerplExchange` and `IKuruOrderBook` re-declare the Perpl and Kuru ABI subsets the adapters call (written by us; neither project's own interface files are included).
 
 ## License
 

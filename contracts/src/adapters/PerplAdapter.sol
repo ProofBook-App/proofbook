@@ -2,20 +2,18 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {IAgentVault} from "../interfaces/IAgentVault.sol";
 import {IVenueAdapter} from "../interfaces/IVenueAdapter.sol";
 import {IPerplExchange} from "../interfaces/external/IPerplExchange.sol";
+import {VaultBoundAdapter} from "./VaultBoundAdapter.sol";
 
 /// @title PerplAdapter
 /// @notice Per-vault adapter that owns one Perpl perps account and trades it for its vault.
 /// The Exchange authorises by msg.sender only, so this contract is the account holder.
 /// UNAUDITED. See the README threat model.
 ///
-/// Lifecycle: deploy (the deployer is the binder) -> AgentRegistry.enter with this adapter in the
-/// envelope's venues -> bind(vault). Only the bound vault can call execute.
+/// Binding: see VaultBoundAdapter. Only the bound vault can call execute.
 ///
 /// `data` for execute/quoteNotional is `abi.encode(uint8 action, bytes payload)`:
 /// - DEPOSIT  payload `abi.encode(uint256 amountCNS)`: pull from the vault into Perpl margin.
@@ -27,7 +25,7 @@ import {IPerplExchange} from "../interfaces/external/IPerplExchange.sol";
 /// Notional (invariant 2): DEPOSIT counts its amount; WITHDRAW and Cancel count 0; open and close
 /// orders count lotLNS x max(limit price, mark price). Perpl fills a sell at the book price even
 /// when its limit is far below it, so the limit alone would let a short understate its size.
-contract PerplAdapter is IVenueAdapter {
+contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     using SafeERC20 for IERC20;
 
     uint8 public constant DEPOSIT = 0;
@@ -41,12 +39,9 @@ contract PerplAdapter is IVenueAdapter {
     IPerplExchange public immutable exchange;
     IERC20 public immutable collateral;
     uint256 internal immutable _collateralScale;
-    address public immutable binder;
 
-    address public vault;
     uint256 public accountId;
 
-    event Bound(address indexed vault, address indexed binder);
     event MarginDeposited(address indexed vault, uint256 amountCNS, uint256 accountId);
     event MarginWithdrawn(address indexed vault, uint256 amountCNS);
     event Recalled(address indexed vault, address indexed by, uint256 amountCNS);
@@ -61,42 +56,23 @@ contract PerplAdapter is IVenueAdapter {
         uint256 notional
     );
 
-    error NotVault(address caller);
-    error NotBinder(address caller);
-    error AlreadyBound(address vault);
-    error BadVault(address vault);
     error CollateralMismatch(address expected, address actual);
     error UnknownAction(uint8 action);
     error OrderTypeNotAllowed(uint8 orderType);
-    error VaultNotFrozen();
 
-    constructor(IPerplExchange exchange_, IERC20 collateral_) {
+    constructor(IPerplExchange exchange_, IERC20 collateral_) VaultBoundAdapter(collateral_) {
         (,,, uint256 decimals, address token,) = exchange_.getExchangeInfo();
         if (token != address(collateral_)) revert CollateralMismatch(token, address(collateral_));
         exchange = exchange_;
         collateral = collateral_;
         _collateralScale = 10 ** decimals;
-        binder = msg.sender;
-    }
-
-    /// @notice One-time link to the vault that lists this adapter. The vault must hold the same
-    /// collateral and already allow this adapter as a venue.
-    function bind(address vault_) external {
-        if (msg.sender != binder) revert NotBinder(msg.sender);
-        if (vault != address(0)) revert AlreadyBound(vault);
-        if (IERC4626(vault_).asset() != address(collateral) || !IAgentVault(vault_).isVenueAllowed(address(this))) {
-            revert BadVault(vault_);
-        }
-        vault = vault_;
-        emit Bound(vault_, msg.sender);
     }
 
     // ------------------------------------------------------------------ IVenueAdapter
 
     /// @inheritdoc IVenueAdapter
     function execute(bytes calldata data) external returns (int256 navDelta) {
-        address v = vault;
-        if (msg.sender != v) revert NotVault(msg.sender);
+        address v = _onlyVault();
         (uint8 action, bytes memory payload) = abi.decode(data, (uint8, bytes));
 
         uint256 before = _equity();
@@ -152,8 +128,7 @@ contract PerplAdapter is IVenueAdapter {
     /// @notice While the vault is frozen, anyone may move free Perpl margin back to the vault so
     /// backers can withdraw it. Open positions stay open; only free margin moves. NAV is unchanged.
     function recall(uint256 amountCNS) external {
-        address v = vault;
-        if (v == address(0) || !IAgentVault(v).frozen()) revert VaultNotFrozen();
+        address v = _onlyFrozenVault();
         _withdrawTo(v, amountCNS);
         emit Recalled(v, msg.sender, amountCNS);
     }

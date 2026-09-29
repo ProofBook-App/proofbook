@@ -7,6 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AgentRegistry} from "../../src/AgentRegistry.sol";
 import {AgentVault} from "../../src/AgentVault.sol";
 import {PerplAdapter} from "../../src/adapters/PerplAdapter.sol";
+import {VaultBoundAdapter} from "../../src/adapters/VaultBoundAdapter.sol";
 import {IAgentVault} from "../../src/interfaces/IAgentVault.sol";
 import {RiskEnvelope} from "../../src/interfaces/IAgentRegistry.sol";
 import {IPerplExchange} from "../../src/interfaces/external/IPerplExchange.sol";
@@ -135,18 +136,18 @@ contract PerplAdapterForkTest is Test {
 
     function test_bind_isOneShotAndBinderOnly() public {
         vm.prank(builder);
-        vm.expectRevert(abi.encodeWithSelector(PerplAdapter.AlreadyBound.selector, address(vault)));
+        vm.expectRevert(abi.encodeWithSelector(VaultBoundAdapter.AlreadyBound.selector, address(vault)));
         adapter.bind(address(vault));
 
         vm.prank(attacker);
         PerplAdapter other = new PerplAdapter(EX, AUSD);
         vm.prank(builder);
-        vm.expectRevert(abi.encodeWithSelector(PerplAdapter.NotBinder.selector, builder));
+        vm.expectRevert(abi.encodeWithSelector(VaultBoundAdapter.NotBinder.selector, builder));
         other.bind(address(vault));
 
         // A vault that does not list the adapter cannot be bound.
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(PerplAdapter.BadVault.selector, address(vault)));
+        vm.expectRevert(abi.encodeWithSelector(VaultBoundAdapter.BadVault.selector, address(vault)));
         other.bind(address(vault));
     }
 
@@ -158,7 +159,7 @@ contract PerplAdapterForkTest is Test {
 
     function test_onlyVaultCanExecute() public {
         vm.prank(sessionKey);
-        vm.expectRevert(abi.encodeWithSelector(PerplAdapter.NotVault.selector, sessionKey));
+        vm.expectRevert(abi.encodeWithSelector(VaultBoundAdapter.NotVault.selector, sessionKey));
         adapter.execute(_margin(DEPOSIT, 50e6));
     }
 
@@ -332,7 +333,7 @@ contract PerplAdapterForkTest is Test {
         _exec(_margin(DEPOSIT, 250e6));
 
         vm.prank(attacker);
-        vm.expectRevert(PerplAdapter.VaultNotFrozen.selector);
+        vm.expectRevert(VaultBoundAdapter.VaultNotFrozen.selector);
         adapter.recall(250e6);
 
         vm.prank(guardian);

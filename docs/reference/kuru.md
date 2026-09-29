@@ -34,6 +34,17 @@ Source: https://docs.kuru.io/contracts/Contract-addresses
 - Taker and maker fees are currently 0 bps on both official markets. Gas: a market sell ≈ 320–540k and a market buy ≈ 800k, so set tight limits.
 - Because the base asset is native MON, a vault trading this market needs `receive()` and must value MON in NAV.
 
+## MON-USDC market params (read onchain ✅ 2026-09-29)
+
+`getMarketParams()` on `0x065C…C394` decodes as (pricePrecision 1e8, sizePrecision 1e10, base `address(0)` 18 dp, quote USDC 6 dp, tickSize 100, minSize 2e12, maxSize 2e18, takerFeeBps 0, makerFeeBps 0). `IKuruOrderBook` in `contracts/src/interfaces/external/` uses this order.
+
+## Fork findings for KuruAdapter (2026-09-29, block ~109.10M)
+
+- Market-buy `quoteSize` is quote × pricePrecision / 10^quoteDecimals (1 USDC = 1e8). Market-sell `size` is wei × sizePrecision / 1e18, so sell amounts must be multiples of 1e8 wei.
+- **A limit bid above the best ask crosses and fills as a buy.** It does not rest. Raising the top bid means buying the whole ask side first.
+- **Dumping ~20M MON emptied the bid side.** `bestBidAsk()` then returns `type(uint256).max` for the bid, and FOK market sells revert with `InsufficientLiquidity()` (`0xbb55fd27`).
+- Kuru's book can still be moved inside one transaction, so KuruAdapter never values MON off the book alone. The reference is Perpl's MON perp (id 10) `oraclePNS` (6 dp, ~7 s old on the fork; Perpl's own `refPriceMaxAgeSec` is 60). Kuru's bid and Perpl's oracle were within ~0.1%.
+
 ## Trading flow
 
 - **Limit orders draw from a MarginAccount deposit, not from the wallet.** Deposit first, or the order reverts.
