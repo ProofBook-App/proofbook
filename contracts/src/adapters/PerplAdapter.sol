@@ -47,11 +47,19 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     IERC20 public immutable collateral;
     uint256 internal immutable _collateralScale;
 
+    /// @dev Perps this adapter has ever sent an open/close order on. Exposure values exactly these.
+    /// Perpl's AccountInfo.positions bitmap is not keyed by perp ID (testnet: perp 64 sets bank1
+    /// bit 253), so it is not used.
+    uint256 public constant MAX_PERPS = 8;
+
     uint256 public accountId;
+    uint256[] internal _perps;
+    mapping(uint256 perpId => bool) public isTrackedPerp;
 
     event MarginDeposited(address indexed vault, uint256 amountCNS, uint256 accountId);
     event MarginWithdrawn(address indexed vault, uint256 amountCNS);
     event Recalled(address indexed vault, address indexed by, uint256 amountCNS);
+    event PerpTracked(address indexed vault, uint256 indexed perpId);
     event OrderSent(
         address indexed vault,
         uint256 indexed perpId,
@@ -67,6 +75,7 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     error UnknownAction(uint8 action);
     error OrderTypeNotAllowed(uint8 orderType);
     error PriceOutsideBand(uint256 limitPNS, uint256 markPNS);
+    error TooManyPerps(uint256 perpId);
 
     constructor(IPerplExchange exchange_, IERC20 collateral_) VaultBoundAdapter(collateral_) {
         (,,, uint256 decimals, address token,) = exchange_.getExchangeInfo();
@@ -102,6 +111,12 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
         } else if (action == ORDER) {
             IPerplExchange.OrderDesc memory d = abi.decode(payload, (IPerplExchange.OrderDesc));
             uint256 notional = _orderNotional(d);
+            if (d.orderType != CANCEL && !isTrackedPerp[d.perpId]) {
+                if (_perps.length == MAX_PERPS) revert TooManyPerps(d.perpId);
+                isTrackedPerp[d.perpId] = true;
+                _perps.push(d.perpId);
+                emit PerpTracked(v, d.perpId);
+            }
             d.amountCNS = 0;
             IPerplExchange.OrderSignature memory sig = exchange.execOrder(d);
             emit OrderSent(v, d.perpId, d.orderType, sig.orderId, d.pricePNS, d.lotLNS, d.leverageHdths, notional);
@@ -122,7 +137,7 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     }
 
     /// @inheritdoc IVenueAdapter
-    /// @dev Free margin (resting-order locks included) + each position's margin and PnL at mark,
+    /// @dev Free margin (resting-order locks included) + each tracked perp's margin and PnL at mark,
     /// each position floored at zero. Exit fees are not deducted. Never reverts: if the Exchange
     /// cannot be read (halted, upgraded, frozen) the Perpl leg counts as 0, which keeps NAV
     /// readable so backers can still withdraw what is idle (invariant 4).
@@ -166,26 +181,21 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
         if (accountId == 0) return total;
         try exchange.getAccountByAddr(address(this)) returns (IPerplExchange.AccountInfo memory a) {
             total += a.balanceCNS;
-            total += _positionsValue(0, a.positions.bank1);
-            total += _positionsValue(1, a.positions.bank2);
-            total += _positionsValue(2, a.positions.bank3);
-            total += _positionsValue(3, a.positions.bank4);
         } catch {
-            return collateral.balanceOf(address(this));
+            return total;
         }
-    }
-
-    function _positionsValue(uint256 bank, uint256 bits) internal view returns (uint256 total) {
-        while (bits != 0) {
-            uint256 lowest = bits & (~bits + 1);
-            uint256 perpId = bank * 256 + Math.log2(lowest);
-            bits ^= lowest;
-            try exchange.getPosition(perpId, accountId) returns (
+        for (uint256 i; i < _perps.length; ++i) {
+            try exchange.getPosition(_perps[i], accountId) returns (
                 IPerplExchange.PositionInfo memory pos, uint256, bool
             ) {
                 int256 value = int256(pos.depositCNS) + pos.pnlCNS;
                 if (value > 0) total += uint256(value);
             } catch {}
         }
+    }
+
+    /// @notice Perps whose positions are counted in exposure.
+    function perps() external view returns (uint256[] memory) {
+        return _perps;
     }
 }

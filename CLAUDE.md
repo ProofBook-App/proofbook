@@ -32,7 +32,7 @@ Update this section as each package is scaffolded.
 cd contracts && forge build && forge test -vvv       # or: pnpm contracts:test
 forge test --match-contract Invariant                  # spec §6 invariant suite
 pnpm contracts:fork                                     # adapter fork tests (test/fork/*, $MONAD_RPC_URL or public RPC); excluded from CI
-forge script script/Deploy.s.sol --rpc-url monad --broadcast --slow
+forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow   # then script/HouseAgent.s.sol; see README Deploying
 cd indexer && pnpm envio codegen && pnpm dev           # needs Docker
 cd web && pnpm dev
 ```

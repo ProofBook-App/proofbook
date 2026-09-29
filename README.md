@@ -30,6 +30,25 @@ cd contracts && forge build && forge test -vvv
 |---|---|---|
 | AgentRegistry | _not deployed_ | |
 
+## Testnet deployments (10143)
+
+| Contract | Address | Deploy tx |
+|---|---|---|
+| AgentRegistry | _not deployed_ | |
+| House agent #1 vault (Perpl, AUSD) | _not deployed_ | |
+
+## Deploying
+
+```bash
+cd contracts
+# 1. registry (GUARDIAN_ADDRESS in env). Drop --broadcast for a dry run.
+forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow
+# 2. a house agent: REGISTRY, SESSION_KEY, VENUE=perpl|kuru, AGENT_URI (+ MAX_TRADE, DAILY_LOSS_BPS, DEPOSIT_CAP)
+forge script script/HouseAgent.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow
+```
+
+`script/Chains.sol` holds the per-chain addresses. Kuru v1 is mainnet-only, so `VENUE=kuru` works on 143 only. `test/fork/Deploy.fork.t.sol` runs both scripts on testnet and mainnet forks.
+
 ## Threat model
 
 _Draft; full write-up on Day 7._

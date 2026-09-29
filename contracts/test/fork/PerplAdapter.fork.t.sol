@@ -215,6 +215,33 @@ contract PerplAdapterForkTest is Test {
         vault.execute(address(adapter), data);
     }
 
+    /// Exposure values each perp the adapter has traded, capped at MAX_PERPS. execOrder is mocked
+    /// so the test needs no liquidity on nine markets; the band and notional checks still run live.
+    function test_tracksTradedPerpsUpToMax() public {
+        _exec(_margin(DEPOSIT, 100e6));
+        vm.mockCall(
+            address(EX),
+            abi.encodeWithSelector(IPerplExchange.execOrder.selector),
+            abi.encode(IPerplExchange.OrderSignature(0, 0))
+        );
+        uint256[9] memory ids = [uint256(1), 10, 20, 31, 40, 50, 60, 70, 80];
+        for (uint256 i; i < 8; ++i) {
+            uint256 mark = EX.getPerpetualInfo(ids[i]).markPNS;
+            _exec(_order(ids[i], OPEN_LONG, 0, mark, 1, true, false));
+        }
+        assertEq(adapter.perps().length, 8);
+        assertTrue(adapter.isTrackedPerp(70));
+        assertFalse(adapter.isTrackedPerp(80));
+
+        uint256 m = EX.getPerpetualInfo(90).markPNS;
+        bytes memory data = _order(90, OPEN_LONG, 0, m, 1, true, false);
+        vm.prank(sessionKey);
+        vm.expectRevert(abi.encodeWithSelector(PerplAdapter.TooManyPerps.selector, uint256(90)));
+        vault.execute(address(adapter), data);
+
+        _exec(_order(1, OPEN_LONG, 0, EX.getPerpetualInfo(1).markPNS, 1, true, false)); // tracked perp still fine
+    }
+
     // ------------------------------------------------------------------ price band
 
     /// Buys (OpenLong, CloseShort) may not bid more than 3% over mark; sells (OpenShort, CloseLong)
@@ -293,7 +320,10 @@ contract PerplAdapterForkTest is Test {
         (uint256 monBid,) = _book(MON);
         _exec(_order(MON, OPEN_SHORT, 0, monBid - monBid / 200, 1_000, false, true));
         IPerplExchange.AccountInfo memory a = EX.getAccountByAddr(address(adapter));
-        assertEq(a.positions.bank1, (1 << BTC) | (1 << MON), "two positions");
+        uint256[] memory tracked = adapter.perps();
+        assertEq(tracked.length, 2, "two perps tracked");
+        assertEq(tracked[0], BTC);
+        assertEq(tracked[1], MON);
         uint256 expected = AUSD.balanceOf(address(vault)) + a.balanceCNS + _posValue(BTC) + _posValue(MON);
         assertEq(vault.nav(), expected, "NAV = idle + free margin + positions at mark");
         assertApproxEqRel(vault.nav(), nav0, 0.01e18, "only fees and spread lost");
@@ -306,7 +336,7 @@ contract PerplAdapterForkTest is Test {
         (, uint256 monAsk) = _book(MON);
         _exec(_order(MON, CLOSE_SHORT, 0, monAsk + monAsk / 200, 1_000, false, true));
         a = EX.getAccountByAddr(address(adapter));
-        assertEq(a.positions.bank1, 0, "flat");
+        assertEq(_posValue(BTC) + _posValue(MON), 0, "flat");
         _exec(_margin(WITHDRAW, a.balanceCNS));
         assertEq(adapter.exposure(address(vault)), 0);
         assertEq(vault.nav(), AUSD.balanceOf(address(vault)));

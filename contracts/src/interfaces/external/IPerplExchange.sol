@@ -15,7 +15,8 @@ interface IPerplExchange {
 
     /// @dev balanceCNS includes lockedBalanceCNS (collateral reserved by resting orders).
     /// Position margin is not in balanceCNS; it is PositionInfo.depositCNS.
-    /// Bit `i` of bank `b` is set when the account holds a position in perp `b * 256 + i`.
+    /// `positions` is a bitmap of open positions but NOT keyed by perp ID (testnet perp 64 set
+    /// bank1 bit 253, perp 256 set bank2 bit 3; mainnet 1 and 10 happened to match). Don't use it.
     struct AccountInfo {
         uint256 accountId;
         uint256 balanceCNS;

@@ -61,12 +61,23 @@
 
 The upstream DelegatedAccount fork test uses testnet values (BTC = `0x10`, testnet Exchange and AUSD). Don't copy them.
 
+## Testnet (10143) addresses (checked with `cast code`, 2026-09-29)
+
+| Contract | Address |
+|---|---|
+| Exchange | `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` (owner `0x9BE11AD8…56EF`) |
+| Collateral AUSD (6 dp, proxy) | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
+
+- Testnet perp IDs are multiples of 16: BTC 16, ETH 32, SOL 48, **MON 64** (price dp 5, lot dp 0), then ZEC 256, LIT 272, VVV 288, TAO 304, PUMP 320, NEAR 336, UNI 352, ARB 368, AAVE 384, MORPHO 400.
+- Minimum account open on testnet is **100 AUSD** (`getMinAccountOpenCNS` = 1e8), versus 10 on mainnet.
+- Testnet AUSD has no public mint. Get it from Perpl's testnet app/faucet.
+
 ## Account and position semantics (fork-verified 2026-09-29, block ~109.09M)
 
 - `AccountInfo.balanceCNS` **includes** `lockedBalanceCNS` (collateral reserved by resting orders). Position margin is **not** in it: it moves to `PositionInfo.depositCNS` when a position opens.
-- `AccountInfo.positions` is a bitmap: bit `i` of `bank1` is perp `i` (a BTC long + MON short gave `bank1 = 1026 = 2 + 1024`). Banks 2–4 presumably cover perps 256–1023 (unverified).
+- ⚠️ `AccountInfo.positions` is a bitmap of open positions but **not keyed by perp ID**. On mainnet BTC (1) + MON (10) gave `bank1 = 2 + 1024`, which looked like it was. On testnet (2026-09-29), MON perp 64 set **bank1 bit 253** and ZEC perp 256 set **bank2 bit 3**. PerplAdapter does not use it: it records the perps it trades (max 8) and values those.
 - `PositionInfo.pnlCNS` is PnL at mark in collateral units (BTC: 0.001 BTC × $12 move = 12000 CNS). It equalled `deltaPnlCNS` with `premiumPnlCNS` = 0. Whether it includes accrued funding is unverified.
-- Account equity = `balanceCNS` + Σ (`depositCNS` + `pnlCNS`) over set bits. This is what `PerplAdapter.exposure` reports.
+- Account equity = `balanceCNS` + Σ (`depositCNS` + `pnlCNS`) over the perps held. `PerplAdapter.exposure` sums over the perps it has traded.
 - **A sell fills at the book price whatever its limit.** An IOC OpenShort with `pricePNS = 1` filled at the best bid. Size checks must value orders at max(limit, mark), never the limit alone. PerplAdapter also rejects limits more than 3% from mark, so agents must send a real limit (e.g. best ask + 0.5%), not `1`.
 - **Closes are reduce-only.** CloseLong for more lots than the position reverts, so a close cannot flip the position.
 - Withdraw allowance at the fork block was ~856k AUSD, refilling ~117 AUSD per block.
