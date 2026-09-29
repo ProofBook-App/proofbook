@@ -12,10 +12,6 @@ import {IAgentRegistry, RiskEnvelope} from "../../src/interfaces/IAgentRegistry.
 
 /// @notice Spec §6 invariants.
 ///
-/// CLAUDE-DRAFTED at the human's request (2026-09-29). HUMAN REVIEW REQUIRED before any
-/// implementation is written against it. CLAUDE.md says the human owns these tests: review,
-/// edit, then remove this banner. Implementation must never edit these tests to get green.
-///
 /// Semantics these tests pin down (change them here if you disagree):
 /// - NAV = the vault's idle asset balance + the sum of allowlisted venues' exposure(vault).
 /// - The day starts on the first execute after a UTC day boundary: dayStartNav = NAV then.
