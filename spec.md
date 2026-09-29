@@ -139,7 +139,7 @@ Status: ✅ done · 🟡 in progress / waiting on the human · ⬜ not started
 - ✅ Invariant tests (§6): 30 tests, Claude-drafted, approved by the human on 2026-09-29. AgentRegistry + AgentVault implemented: **30/30 green** (also under the CI fuzz profile). The fuzz-bound fix in `testFuzz_Inv4` was approved and applied by the human's instruction.
 - ✅ Spike: Kimi K2.6 tool calls on Workers AI (2026-09-29, `spikes/kimi/`, `docs/reference/kimi.md`): read-then-act round in ~6 s, ~104 neurons.
 - ✅ Spike: Privy server wallet with policy signing on chain 143 (2026-09-29, `spikes/privy/`, `docs/reference/privy.md`): only `execute` on one vault, chain 143, value 0 signs; every other call gets `policy_violation`. Sign with Privy, broadcast via our RPC.
-- 🟡 Spike: Mera SDK in React Router v7 on Workers (passkey login, signing session, fresh-device rebuild).
+- 🟡 Spike: Mera SDK on Workers (2026-09-29, `spikes/mera/`, `docs/reference/mera.md`): `@category-labs/mera` 0.2.0 builds and runs in React Router 7.18 on Workers; derivation and session signing verified in Node. Waiting on the human's passkey test (script in `spikes/mera/README.md`).
 - ⬜ Accounts and keys: Privy app, Mera, Envio, Alchemy, Cloudflare API token. Mainnet wallets funded with MON (10 MON reserve plus headroom), AUSD and a little USDC.
 - ⬜ Post the first progress update on the portal (unlocks mentor support). Register an X handle.
 
