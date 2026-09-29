@@ -19,7 +19,7 @@ See [spec.md §4](spec.md). Packages: `contracts/` (Foundry), `agents/`, `indexe
 Requires Foundry ≥ 1.8, Node ≥ 22.18 (see `.nvmrc`), pnpm 10, Docker (indexer).
 
 ```bash
-git clone --recurse-submodules <repo>
+git clone --recurse-submodules https://github.com/ProofBook-App/proofbook
 cp .env.example .env
 cd contracts && forge build && forge test -vvv
 ```

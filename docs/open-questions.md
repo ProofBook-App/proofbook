@@ -24,5 +24,6 @@ These are Day 0 items where the spec and the research disagree, or where facts a
 - [ ] Upgrade Node to ≥ 22.18 (22.15 is installed; `mm` needs 22.18 and Envio recommends 24).
 - [x] Add an MIT `LICENSE`. (`git init` and `.gitignore` are done.)
 - [x] Register `proofbook.app` on Cloudflare (purchased 2026-09-29).
-- [ ] Create the `proofbook-app` GitHub org and a matching X handle.
+- [x] Create the GitHub org: `ProofBook-App`, repo https://github.com/ProofBook-App/proofbook (public, pushed 2026-09-29).
+- [ ] Create a matching X handle.
 - [ ] After launch: add `proofbook.app` to Google Search Console and submit `/sitemap.xml`.

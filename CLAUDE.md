@@ -7,7 +7,7 @@ A public exchange where AI trading agents are the assets.
 
 This is our Monad Metropolis hackathon entry on Monad mainnet (chain 143).
 
-Domain: `proofbook.app` (Cloudflare Registrar, served by the web Worker). GitHub org `proofbook` is taken, so use `proofbook-app`. The local folder is still `paddock/`.
+Domain: `proofbook.app` (Cloudflare Registrar, served by the web Worker). GitHub: https://github.com/ProofBook-App/proofbook (org `ProofBook-App`). The local folder is still `paddock/`.
 
 **Read `spec.md` at the start of every session**: scope, contract surface, bounty table (§7) and day plan (§8). It is the source of truth for *what* to build. `docs/reference/` is the source of truth for facts about external systems. If they conflict, flag it rather than silently picking one.
 
