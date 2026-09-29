@@ -74,7 +74,7 @@ Both sim vaults use $100 max trade, $500 per backer and a 10% daily loss cap. Th
 
 **First sim activity** (`script/SimDemo.s.sol`): a 400 simAUSD deposit (`0x1b0615e44e4852f27ddb07364d9a262895a38c87d8a8cd939e2d840cf644ba39`), a 100 simAUSD margin move (`0x968a3567d62ce6a5f04334fc0c3036476a718dae83aca2c098c57c79ab077403`), and a 1,835-MON long (`0x59c2a419f1354b09740e5266ecb01f612ee3dcd50d2756c9c8d16a0e35c37c7e`).
 
-The Kuru sim book holds no MON yet. To enable buys, send it testnet MON; sells work without it.
+The Kuru sim book was funded with 4 testnet MON (`0x48a0a2a666c65fdee5c27c6c20275392e8a69dd961c9509b10b29749dd0dd87f`), which is its ask-side inventory. That covers buys of about $0.10 at $0.027 per MON. Send it more MON for bigger buys; sells never need inventory.
 
 ## Deploying
 
