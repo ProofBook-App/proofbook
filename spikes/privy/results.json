@@ -1,0 +1,139 @@
+{
+  "ranAt": "2026-09-29T21:32:45.294Z",
+  "policyId": "mf16tutkqae6us5p5anpbi9b",
+  "walletId": "rpl0pqwarqch5idnfka2lrfx",
+  "walletAddress": "0xb3d11BABa5CB53E6B784A0C0C58A1Fd59FDE3C7B",
+  "results": [
+    {
+      "case": "allowed: execute() on vault, chain 143, value 0",
+      "expect": "allow",
+      "status": 200,
+      "response": {
+        "method": "eth_signTransaction",
+        "data": {
+          "signed_transaction": "0x02f8f2818f80843b9aca00852e90edd000830493e0944dcfdf391b30d709886656c9cc2645bc0f0cde7780b8841cff79cd000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004deadbeef00000000000000000000000000000000000000000000000000000000c001a0c98e211bbbe548059218a94b6fe39882e272b2e2fcaabbbd699c3ce7bdb24c8aa01e0c5647ff4357e309f0099eeb56e58f383b08b0ab96549acb356fc3ec4b60f7",
+          "encoding": "rlp"
+        }
+      },
+      "decoded": {
+        "signer": "0xb3d11baba5cb53e6b784a0c0c58a1fd59fde3c7b",
+        "chainId": "0x8f",
+        "to": "0x4dcfdf391b30d709886656c9cc2645bc0f0cde77",
+        "value": "0x0",
+        "input": "0x1cff79cd"
+      },
+      "signerMatchesWallet": true
+    },
+    {
+      "case": "allowed?: vault address lowercased in request",
+      "expect": "allow?",
+      "status": 200,
+      "response": {
+        "method": "eth_signTransaction",
+        "data": {
+          "signed_transaction": "0x02f8f2818f80843b9aca00852e90edd000830493e0944dcfdf391b30d709886656c9cc2645bc0f0cde7780b8841cff79cd000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004deadbeef00000000000000000000000000000000000000000000000000000000c001a0c98e211bbbe548059218a94b6fe39882e272b2e2fcaabbbd699c3ce7bdb24c8aa01e0c5647ff4357e309f0099eeb56e58f383b08b0ab96549acb356fc3ec4b60f7",
+          "encoding": "rlp"
+        }
+      },
+      "decoded": {
+        "signer": "0xb3d11baba5cb53e6b784a0c0c58a1fd59fde3c7b",
+        "chainId": "0x8f",
+        "to": "0x4dcfdf391b30d709886656c9cc2645bc0f0cde77",
+        "value": "0x0",
+        "input": "0x1cff79cd"
+      },
+      "signerMatchesWallet": true
+    },
+    {
+      "case": "allowed?: value field omitted",
+      "expect": "allow?",
+      "status": 200,
+      "response": {
+        "method": "eth_signTransaction",
+        "data": {
+          "signed_transaction": "0x02f8f2818f80843b9aca00852e90edd000830493e0944dcfdf391b30d709886656c9cc2645bc0f0cde7780b8841cff79cd000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004deadbeef00000000000000000000000000000000000000000000000000000000c001a0c98e211bbbe548059218a94b6fe39882e272b2e2fcaabbbd699c3ce7bdb24c8aa01e0c5647ff4357e309f0099eeb56e58f383b08b0ab96549acb356fc3ec4b60f7",
+          "encoding": "rlp"
+        }
+      },
+      "decoded": {
+        "signer": "0xb3d11baba5cb53e6b784a0c0c58a1fd59fde3c7b",
+        "chainId": "0x8f",
+        "to": "0x4dcfdf391b30d709886656c9cc2645bc0f0cde77",
+        "value": "0x0",
+        "input": "0x1cff79cd"
+      },
+      "signerMatchesWallet": true
+    },
+    {
+      "case": "deny: execute() calldata to another address",
+      "expect": "deny",
+      "status": 400,
+      "response": {
+        "error": "RPC request denied due to policy violation",
+        "code": "policy_violation"
+      }
+    },
+    {
+      "case": "deny: different selector on vault (transfer(address,uint256))",
+      "expect": "deny",
+      "status": 400,
+      "response": {
+        "error": "RPC request denied due to policy violation",
+        "code": "policy_violation"
+      }
+    },
+    {
+      "case": "deny: execute() on vault with value 1 wei",
+      "expect": "deny",
+      "status": 400,
+      "response": {
+        "error": "RPC request denied due to policy violation",
+        "code": "policy_violation"
+      }
+    },
+    {
+      "case": "deny: execute() on vault, chain 10143",
+      "expect": "deny",
+      "status": 400,
+      "response": {
+        "error": "RPC request denied due to policy violation",
+        "code": "policy_violation"
+      }
+    },
+    {
+      "case": "deny: plain MON transfer (no data)",
+      "expect": "deny",
+      "status": 400,
+      "response": {
+        "error": "RPC request denied due to policy violation",
+        "code": "policy_violation"
+      }
+    },
+    {
+      "case": "deny: allowed tx but NO authorization signature",
+      "expect": "deny",
+      "status": 401,
+      "response": {
+        "error": "Missing `privy-authorization-signature` header or no signatures provided. Learn more about authorization signatures here: https://docs.privy.io/api-reference/authorization-signatures"
+      }
+    },
+    {
+      "case": "deny: personal_sign (no rule)",
+      "expect": "deny",
+      "status": 400,
+      "response": {
+        "error": "RPC request denied due to policy violation",
+        "code": "policy_violation"
+      }
+    },
+    {
+      "case": "deny: PATCH policy without owner signature",
+      "expect": "deny",
+      "status": 401,
+      "response": {
+        "error": "Missing `privy-authorization-signature` header or no signatures provided. Learn more about authorization signatures here: https://docs.privy.io/api-reference/authorization-signatures",
+        "code": "invalid_data"
+      }
+    }
+  ]
+}
