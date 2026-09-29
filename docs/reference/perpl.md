@@ -70,7 +70,8 @@ The upstream DelegatedAccount fork test uses testnet values (BTC = `0x10`, testn
 
 - Testnet perp IDs are multiples of 16: BTC 16, ETH 32, SOL 48, **MON 64** (price dp 5, lot dp 0), then ZEC 256, LIT 272, VVV 288, TAO 304, PUMP 320, NEAR 336, UNI 352, ARB 368, AAVE 384, MORPHO 400.
 - Minimum account open on testnet is **100 AUSD** (`getMinAccountOpenCNS` = 1e8), versus 10 on mainnet.
-- Testnet AUSD has no public mint. Get it from Perpl's testnet app/faucet.
+- **Getting testnet AUSD (checked 2026-09-29):** Agora's faucet contract `0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C` (proxy, impl `0xba80…2a49`, listed in Agora's docs at docs.agora.finance/developer/contract-deployments). Call `requestFunds(address recipient)`. Drip: 10,000 AUSD per call, at most once per 60 s, and only while the recipient holds under 100,000. **On 2026-09-29 it was empty**: `requestFunds` reverted with `InsufficientFunds`, the faucet held 1 unit, and the last drip was about 4 days earlier. Ask Agora (a hackathon sponsor) to refill it.
+- Perpl's API docs (github.com/PerplFoundation/api-docs) list testnet collateral as `USD 0xdf5b718d…c027`. That is **stale**: the Exchange's `getExchangeInfo()` returns AUSD `0xa9012a05…22dC`. The chain wins.
 
 ## Account and position semantics (fork-verified 2026-09-29, block ~109.09M)
 
