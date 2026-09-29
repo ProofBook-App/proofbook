@@ -135,7 +135,7 @@ Status: ✅ done · 🟡 in progress / waiting on the human · ⬜ not started
 - ✅ Spikes: a contract can own a Perpl account (fork test). Kuru `minSize` applies only to limit orders, and MON-AUSD is dead while MON-USDC is live. `mm` 7.0.0 supports Monad.
 - ✅ Repo scaffold: public repo https://github.com/ProofBook-App/proofbook, Foundry project, pnpm workspace root, CI, MIT licence. Domain `proofbook.app` bought.
 - ✅ Toolchain: Foundry 1.8.3, Node 24, pnpm 10, Docker, `mm` 7.0.0.
-- ✅ Invariant tests (§6): 30 tests, Claude-drafted, approved by the human on 2026-09-29. AgentRegistry + AgentVault implemented: **29/30 green**. 🟡 `testFuzz_Inv4_maxWithdrawIsFullShareWhenIdle` fails because of a test bug (the fuzzed loss can exceed the vault's whole balance, and the mock burn reverts). A one-line fix is proposed and awaits human approval.
+- ✅ Invariant tests (§6): 30 tests, Claude-drafted, approved by the human on 2026-09-29. AgentRegistry + AgentVault implemented: **30/30 green** (also under the CI fuzz profile). The fuzz-bound fix in `testFuzz_Inv4` was approved and applied by the human's instruction.
 - ⬜ Spikes: Mera SDK in React Router v7 on Workers (passkey login, signing session, fresh-device rebuild); Privy server wallet with policy signing on chain 143; Kimi K2.6 tool calls on Workers AI.
 - ⬜ Accounts and keys: Privy app, Mera, Envio, Alchemy, Cloudflare API token. Mainnet wallets funded with MON (10 MON reserve plus headroom), AUSD and a little USDC.
 - ⬜ Post the first progress update on the portal (unlocks mentor support). Register an X handle.

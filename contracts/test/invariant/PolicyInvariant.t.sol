@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Vm} from "forge-std/Vm.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {BaseTest} from "../Base.t.sol";
@@ -238,7 +239,7 @@ contract PolicyInvariantTest is BaseTest {
         (, AgentVault vault) = _enter();
         a = bound(a, 1e6, DEPOSIT);
         b = bound(b, 1e6, DEPOSIT);
-        pnl = bound(pnl, -int256(MAX_TRADE), 0);
+        pnl = bound(pnl, -int256(Math.min(MAX_TRADE, a + b)), 0); // a venue cannot lose more than the vault holds
         _deposit(vault, alice, a);
         _deposit(vault, bob, b);
         _trade(vault, MAX_TRADE, pnl);
