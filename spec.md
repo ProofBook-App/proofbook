@@ -84,7 +84,7 @@ State: `agentId`, `sessionKey`, `policy {maxTradeNotional, dailyLossCap, venueAl
 ### Adapters
 - `IVenueAdapter { function execute(bytes calldata) external returns (int256 navDelta); function exposure(address vault) external view returns (uint256); }`
 - `KuruAdapter`: place/cancel limit and market orders on Kuru CLOB from the vault's balance.
-- `PerplAdapter`: confirmed feasible by the Day 0 fork spike (a contract owns the Perpl account directly). See `docs/reference/perpl.md` for the ABI and gotchas (`maxNegPnlCollatBPS`, withdrawal rate limit, admin powers).
+- `PerplAdapter` (`contracts/src/adapters/PerplAdapter.sol`): one instance per vault, owns the Perpl account directly. Actions: DEPOSIT / WITHDRAW margin, ORDER (open, close, cancel only). Notional = lot × max(limit, mark). Exposure = free margin + each position's margin and PnL at mark (floored at 0); reads that fail count as 0 so NAV never reverts. `recall` lets anyone move free margin back to a frozen vault. See `docs/reference/perpl.md` for the ABI and gotchas.
 
 ### SessionPool (stretch)
 - `openSession(agentIds[], endsAt)`, `bet(sessionId, agentId)` in AUSD, `settle(sessionId)` from an indexer-signed result (single signer for hackathon, documented as such), pro-rata payout minus 2% to protocol.
@@ -140,7 +140,7 @@ Status: ✅ done · 🟡 in progress / waiting on the human · ⬜ not started
 - ⬜ Accounts and keys: Privy app, Mera, Envio, Alchemy, Cloudflare API token. Mainnet wallets funded with MON (10 MON reserve plus headroom), AUSD and a little USDC.
 - ⬜ Post the first progress update on the portal (unlocks mentor support). Register an X handle.
 
-**Day 1 (Oct 5)** — PerplAdapter (from the spike) + KuruAdapter (MON-USDC market orders), each fork-tested. Deploy to testnet, then mainnet **after human approval**. Addresses and tx hashes go into the README immediately.
+**Day 1 (Oct 5)** — ✅ PerplAdapter (built early, 2026-09-29): per-vault, owns its Perpl account, `bind(vault)` after `enter`; 16/16 mainnet-fork tests green through a real AgentRegistry → AgentVault (`pnpm contracts:fork`). ⬜ KuruAdapter (MON-USDC market orders), fork-tested. Deploy to testnet, then mainnet **after human approval**. Addresses and tx hashes go into the README immediately.
 **Day 2** — House agents: Kimi K2.6 via Workers AI, session keys in Privy server wallets with policy. First honest house agent trading $20–50 on Perpl. Plainly labelled.
 **Day 3** — Envio HyperIndex indexer (registry, vaults, Perpl/Kuru fills) + Workers API + D1 snapshot. Two more house agents.
 **Day 4** — Web PWA: landing, leaderboard, agent profile, Mera onboarding (one passkey ceremony), deposit/withdraw with signing sessions, AUSD balance, "enter your agent". This covers the Agora demo path: passkey → AUSD → Perpl trade.

@@ -32,7 +32,12 @@ cd contracts && forge build && forge test -vvv
 
 ## Threat model
 
-_TODO: session-key compromise, adapter trust, NAV/mark manipulation, guardian powers, what is not audited._
+_Draft; full write-up on Day 7._
+
+- **Unaudited.** AgentRegistry, AgentVault and PerplAdapter have not been audited.
+- **Session-key compromise:** the key can only call allowlisted adapters, each call is capped at `maxTradeNotional`, and a loss past the daily cap freezes the vault in the same tx. Within those limits it can still trade badly.
+- **Perpl (PerplAdapter):** Perpl's owner can upgrade the Exchange, freeze or block accounts, enable whitelisting and halt trading. Withdrawals are rate-limited exchange-wide. If the Exchange cannot be read, the vault counts the Perpl leg as 0 rather than reverting, so idle funds stay withdrawable. Positions are valued at Perpl's mark with no exit fee deducted. The per-trade cap does not limit the sum of resting orders. When a vault is frozen, anyone can `recall` free margin to it, but open positions stay open until the agent owner unfreezes.
+- _TODO: NAV/mark manipulation on Kuru, guardian powers, fee edge cases._
 
 ## AI tooling disclosure
 
@@ -40,7 +45,7 @@ This project is built with Claude Code (Anthropic). The human writes the spec an
 
 ## Pre-existing code
 
-None. Third-party dependencies: OpenZeppelin Contracts v5.7.0, forge-std.
+None. Third-party dependencies: OpenZeppelin Contracts v5.7.0, forge-std. `IPerplExchange` re-declares the Perpl Exchange ABI subset the adapter calls (written by us; Perpl's own interface file is not included).
 
 ## License
 

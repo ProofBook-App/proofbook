@@ -24,4 +24,4 @@ jobs:
           version: v1.8.3
       - run: forge fmt --check
       - run: forge build --sizes
-      - run: forge test -vvv
+      - run: forge test -vvv --no-match-path 'test/fork/*' # fork tests need a Monad RPC; run locally with pnpm contracts:fork

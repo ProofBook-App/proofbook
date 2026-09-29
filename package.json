@@ -9,6 +9,7 @@
   "scripts": {
     "contracts:build": "cd contracts && forge build",
     "contracts:test": "cd contracts && forge test -vvv",
-    "contracts:invariants": "cd contracts && forge test --match-contract Invariant -vvv"
+    "contracts:invariants": "cd contracts && forge test --match-contract Invariant -vvv",
+    "contracts:fork": "cd contracts && forge test --match-path 'test/fork/*' -vv"
   }
 }

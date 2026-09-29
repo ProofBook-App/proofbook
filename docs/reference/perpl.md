@@ -31,7 +31,7 @@
 - **→ `PerplAdapter` is feasible. Mainnet fork spike passed on 2026-09-29 (block ~109.05M).**
   - A plain contract did create → deposit → post-only order → cancel → withdraw, and IOC open → close. The Exchange checks only `msg.sender`. There's no `tx.origin`/EOA check and no signature path. `whitelistingEnabled()` is false.
   - **Design:** the vault or adapter owns the account directly. That fits invariants 1–3 better than wrapping DelegatedAccount, whose operator can also deposit and enable order forwarding.
-  - The spike source (with `MiniPerplAdapter` and the `_dealAUSD` helper) is in the session scratchpad `perpl-spike/`. Move it into `contracts/test/fork/` when building the adapter.
+  - Built: `contracts/src/adapters/PerplAdapter.sol`, tested in `contracts/test/fork/PerplAdapter.fork.t.sol` (includes the `_dealAUSD` helper). Our interface `IPerplExchange` re-declares only what the adapter uses; Perpl's `IExchange.sol` is UNLICENSED and is not vendored.
 
 ## Exchange ABI (from `interfaces/IExchange.sol`, confirmed on the fork)
 
@@ -61,6 +61,17 @@
 
 The upstream DelegatedAccount fork test uses testnet values (BTC = `0x10`, testnet Exchange and AUSD). Don't copy them.
 
+## Account and position semantics (fork-verified 2026-09-29, block ~109.09M)
+
+- `AccountInfo.balanceCNS` **includes** `lockedBalanceCNS` (collateral reserved by resting orders). Position margin is **not** in it: it moves to `PositionInfo.depositCNS` when a position opens.
+- `AccountInfo.positions` is a bitmap: bit `i` of `bank1` is perp `i` (a BTC long + MON short gave `bank1 = 1026 = 2 + 1024`). Banks 2–4 presumably cover perps 256–1023 (unverified).
+- `PositionInfo.pnlCNS` is PnL at mark in collateral units (BTC: 0.001 BTC × $12 move = 12000 CNS). It equalled `deltaPnlCNS` with `premiumPnlCNS` = 0. Whether it includes accrued funding is unverified.
+- Account equity = `balanceCNS` + Σ (`depositCNS` + `pnlCNS`) over set bits. This is what `PerplAdapter.exposure` reports.
+- **A sell fills at the book price whatever its limit.** An IOC OpenShort with `pricePNS = 1` filled at the best bid. Size checks must value orders at max(limit, mark), never the limit alone.
+- **Closes are reduce-only.** CloseLong for more lots than the position reverts, so a close cannot flip the position.
+- Withdraw allowance at the fork block was ~856k AUSD, refilling ~117 AUSD per block.
+- Notional in collateral units = `lotLNS × pricePNS × 10^6 / 10^(priceDecimals + lotDecimals)`.
+
 ## Gotchas
 
 - **`maxNegPnlCollatBPS` must be set explicitly (use 300).** Onchain, 0 means "refuse any fill with negative PnL against mark", so taker orders fail with `TakerOrderSettlementFailed(…, 14)`. The API's "omit for default (300)" doesn't exist onchain.
@@ -79,6 +90,6 @@ The upstream DelegatedAccount fork test uses testnet values (BTC = `0x10`, testn
 
 ## Unverified ⚠️
 
-- Event names for indexing (not read yet).
+- Event names for indexing (not read yet). PerplAdapter emits its own `MarginDeposited`, `MarginWithdrawn`, `OrderSent`, `Recalled`, `Bound`, so the leaderboard does not depend on them.
 - Perp IDs above 100, and price/lot decimals for HYPE and later markets.
 - Whether liquidation events are public onchain in a usable form.
