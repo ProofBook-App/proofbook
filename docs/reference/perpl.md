@@ -67,7 +67,7 @@ The upstream DelegatedAccount fork test uses testnet values (BTC = `0x10`, testn
 - `AccountInfo.positions` is a bitmap: bit `i` of `bank1` is perp `i` (a BTC long + MON short gave `bank1 = 1026 = 2 + 1024`). Banks 2–4 presumably cover perps 256–1023 (unverified).
 - `PositionInfo.pnlCNS` is PnL at mark in collateral units (BTC: 0.001 BTC × $12 move = 12000 CNS). It equalled `deltaPnlCNS` with `premiumPnlCNS` = 0. Whether it includes accrued funding is unverified.
 - Account equity = `balanceCNS` + Σ (`depositCNS` + `pnlCNS`) over set bits. This is what `PerplAdapter.exposure` reports.
-- **A sell fills at the book price whatever its limit.** An IOC OpenShort with `pricePNS = 1` filled at the best bid. Size checks must value orders at max(limit, mark), never the limit alone.
+- **A sell fills at the book price whatever its limit.** An IOC OpenShort with `pricePNS = 1` filled at the best bid. Size checks must value orders at max(limit, mark), never the limit alone. PerplAdapter also rejects limits more than 3% from mark, so agents must send a real limit (e.g. best ask + 0.5%), not `1`.
 - **Closes are reduce-only.** CloseLong for more lots than the position reverts, so a close cannot flip the position.
 - Withdraw allowance at the fork block was ~856k AUSD, refilling ~117 AUSD per block.
 - Notional in collateral units = `lotLNS × pricePNS × 10^6 / 10^(priceDecimals + lotDecimals)`.

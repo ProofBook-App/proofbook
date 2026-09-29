@@ -25,6 +25,10 @@ import {VaultBoundAdapter} from "./VaultBoundAdapter.sol";
 /// Notional (invariant 2): DEPOSIT counts its amount; WITHDRAW and Cancel count 0; open and close
 /// orders count lotLNS x max(limit price, mark price). Perpl fills a sell at the book price even
 /// when its limit is far below it, so the limit alone would let a short understate its size.
+///
+/// Price band: open and close orders must carry a limit within BAND_BPS of Perpl's mark (buys at
+/// most mark + 3%, sells at least mark - 3%). The limit bounds the worst fill, so a compromised
+/// session key cannot trade the vault into a counterparty's off-market order.
 contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     using SafeERC20 for IERC20;
 
@@ -35,6 +39,9 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     uint8 internal constant OPEN_LONG = 0;
     uint8 internal constant CLOSE_SHORT = 3;
     uint8 internal constant CANCEL = 4;
+
+    uint256 public constant BAND_BPS = 300;
+    uint256 internal constant BPS = 10_000;
 
     IPerplExchange public immutable exchange;
     IERC20 public immutable collateral;
@@ -59,6 +66,7 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     error CollateralMismatch(address expected, address actual);
     error UnknownAction(uint8 action);
     error OrderTypeNotAllowed(uint8 orderType);
+    error PriceOutsideBand(uint256 limitPNS, uint256 markPNS);
 
     constructor(IPerplExchange exchange_, IERC20 collateral_) VaultBoundAdapter(collateral_) {
         (,,, uint256 decimals, address token,) = exchange_.getExchangeInfo();
@@ -144,6 +152,10 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
         if (d.orderType == CANCEL) return 0;
         if (d.orderType > CLOSE_SHORT) revert OrderTypeNotAllowed(d.orderType);
         IPerplExchange.PerpetualInfo memory p = exchange.getPerpetualInfo(d.perpId);
+        bool isBuy = d.orderType == OPEN_LONG || d.orderType == CLOSE_SHORT;
+        if (isBuy ? d.pricePNS * BPS > p.markPNS * (BPS + BAND_BPS) : d.pricePNS * BPS < p.markPNS * (BPS - BAND_BPS)) {
+            revert PriceOutsideBand(d.pricePNS, p.markPNS);
+        }
         uint256 price = Math.max(d.pricePNS, p.markPNS);
         return
             Math.mulDiv(d.lotLNS, price * _collateralScale, 10 ** (p.priceDecimals + p.lotDecimals), Math.Rounding.Ceil);

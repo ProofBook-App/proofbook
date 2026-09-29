@@ -191,27 +191,59 @@ contract PerplAdapterForkTest is Test {
 
     function test_quoteNotional_btcLotTimesPrice() public view {
         IPerplExchange.PerpetualInfo memory p = EX.getPerpetualInfo(BTC);
-        uint256 price = p.markPNS * 2; // limit above mark: limit price is used
+        uint256 price = p.markPNS * 102 / 100; // limit above mark (inside the band): limit is used
         // 100 lots = 0.001 BTC; price has 1 dp. notional (6 dp) = 100 * price * 1e6 / 1e6.
         assertEq(adapter.quoteNotional(_order(BTC, OPEN_LONG, 0, price, 100, false, true)), 100 * price);
     }
 
-    /// Perpl fills a short at the book price even with limit 1, so the quote uses the mark.
-    function test_quoteNotional_lowLimitShortCountsAtMark() public view {
+    /// Perpl fills a short at the book price whatever its limit, so the size is valued at the mark.
+    function test_quoteNotional_shortBelowMarkCountsAtMark() public view {
         IPerplExchange.PerpetualInfo memory p = EX.getPerpetualInfo(MON);
-        uint256 q = adapter.quoteNotional(_order(MON, OPEN_SHORT, 0, 1, 1_000, false, true));
+        uint256 q = adapter.quoteNotional(_order(MON, OPEN_SHORT, 0, p.markPNS * 98 / 100, 1_000, false, true));
         assertEq(q, 1_000 * p.markPNS); // MON price 6 dp, lot 0 dp
     }
 
-    function test_oversizedLowLimitShortReverts() public {
+    function test_oversizedShortReverts() public {
         _exec(_margin(DEPOSIT, 200e6));
         IPerplExchange.PerpetualInfo memory p = EX.getPerpetualInfo(MON);
         uint256 lot = MAX_TRADE / p.markPNS + 1; // just over the cap at mark
-        bytes memory data = _order(MON, OPEN_SHORT, 0, 1, lot, false, true);
+        bytes memory data = _order(MON, OPEN_SHORT, 0, p.markPNS * 98 / 100, lot, false, true);
         uint256 q = adapter.quoteNotional(data);
         assertGt(q, MAX_TRADE);
         vm.prank(sessionKey);
         vm.expectRevert(abi.encodeWithSelector(IAgentVault.TradeTooLarge.selector, q, MAX_TRADE));
+        vault.execute(address(adapter), data);
+    }
+
+    // ------------------------------------------------------------------ price band
+
+    /// Buys (OpenLong, CloseShort) may not bid more than 3% over mark; sells (OpenShort, CloseLong)
+    /// may not offer more than 3% under it. Cancels are unaffected.
+    function test_priceBand_offMarketLimitsRevert() public {
+        uint256 mark = EX.getPerpetualInfo(MON).markPNS;
+        uint256 hi = mark * 104 / 100;
+        uint256 lo = mark * 96 / 100;
+        uint8[2] memory buys = [OPEN_LONG, CLOSE_SHORT];
+        uint8[2] memory sells = [OPEN_SHORT, CLOSE_LONG];
+        for (uint256 i; i < 2; ++i) {
+            vm.expectRevert(abi.encodeWithSelector(PerplAdapter.PriceOutsideBand.selector, hi, mark));
+            adapter.quoteNotional(_order(MON, buys[i], 0, hi, 100, false, true));
+            vm.expectRevert(abi.encodeWithSelector(PerplAdapter.PriceOutsideBand.selector, lo, mark));
+            adapter.quoteNotional(_order(MON, sells[i], 0, lo, 100, false, true));
+            vm.expectRevert(abi.encodeWithSelector(PerplAdapter.PriceOutsideBand.selector, 1, mark));
+            adapter.quoteNotional(_order(MON, sells[i], 0, 1, 100, false, true)); // "market" sell
+        }
+        // Inside the band on the protective side is fine.
+        adapter.quoteNotional(_order(MON, OPEN_LONG, 0, mark * 102 / 100, 100, false, true));
+        adapter.quoteNotional(_order(MON, OPEN_SHORT, 0, mark * 98 / 100, 100, false, true));
+    }
+
+    function test_priceBand_blocksExecuteThroughVault() public {
+        _exec(_margin(DEPOSIT, 100e6));
+        uint256 mark = EX.getPerpetualInfo(BTC).markPNS;
+        bytes memory data = _order(BTC, OPEN_LONG, 0, mark * 2, 10, false, true);
+        vm.prank(sessionKey);
+        vm.expectRevert(abi.encodeWithSelector(PerplAdapter.PriceOutsideBand.selector, mark * 2, mark));
         vault.execute(address(adapter), data);
     }
 
