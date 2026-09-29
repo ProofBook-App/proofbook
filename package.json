@@ -1,0 +1,14 @@
+{
+  "name": "proofbook",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "contracts:build": "cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test -vvv",
+    "contracts:invariants": "cd contracts && forge test --match-contract Invariant -vvv"
+  }
+}

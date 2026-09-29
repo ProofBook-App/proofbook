@@ -1,0 +1,33 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+dist/
+build/
+.wrangler/
+.react-router/
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31337/
+contracts/broadcast/**/dry-run/
+
+# Envio
+indexer/generated/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Local spikes (contain UNLICENSED third-party interfaces)
+.spikes/

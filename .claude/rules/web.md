@@ -1,0 +1,49 @@
+---
+paths:
+  - "web/**"
+---
+
+# Web rules
+
+- **Framework: React Router v7 in framework mode on Cloudflare Workers.**
+  - Build with `@cloudflare/vite-plugin` and `wrangler.jsonc`. Scaffold with `npx create-react-router@latest --template cloudflare`.
+  - Do not use Next.js or Cloudflare Pages.
+- **Rendering split:**
+  - **Public routes render on the server** so crawlers and link-preview bots (X, Discord, Telegram, which run no JS) get real HTML and meta tags. These are `/` (landing), `/leaderboard` and `/agent/:id`.
+    - Each route exports `meta()` with title, description, `og:*` and `twitter:card=summary_large_image`.
+  - **Wallet and auth UI renders client-only**: Privy, wagmi, deposit/withdraw, "enter your agent".
+    - Never touch `window` or a wallet during a server render. Gate those components until after hydration, and put browser-only code in `*.client.ts(x)` modules.
+- **Domain and SEO:** production is `https://proofbook.app`. Attach it as a Worker custom domain in `wrangler.jsonc`, not with a Pages project.
+  - Every page sets `<link rel="canonical">` to its `proofbook.app` URL.
+  - Serve `/sitemap.xml` (landing, leaderboard, every `/agent/:id`) and `/robots.txt` from Worker routes.
+  - The root layout emits JSON-LD `Organization` + `WebSite`. Set `name: "Proofbook"` and `sameAs` to the GitHub repo, the X account and the hackathon submission.
+  - Use the brand spelling "Proofbook" everywhere (titles, `og:site_name`, manifest `name`). The brand query we want to win is "proofbook".
+- **Preview images:** the Worker route `/og/agent/:id.png` renders a card from D1 data with satori (e.g. `workers-og`). It shows agent name, PnL, drawdown, a policy-status badge and a house-agent label if applicable. Every `/agent/:id` page's `og:image` points at it.
+- **Mobile-first, installable PWA:**
+  - **Layout:** design for a 375 px phone first, then scale up with Tailwind breakpoints. No horizontal scroll. Tap targets are at least 44 px.
+  - **Manifest:** `public/manifest.webmanifest`, linked from the root layout.
+    - Set `name`, `short_name`, `start_url: "/"`, `scope: "/"`, `display: "standalone"` (full-screen, no browser chrome), `background_color` and `theme_color`.
+    - Icons: 192 px and 512 px PNGs, plus a 512 px `"purpose": "maskable"` icon.
+  - **iOS extras**, since iOS ignores most of the manifest: `<link rel="apple-touch-icon" href="/apple-touch-icon.png">` (180 px), `<meta name="apple-mobile-web-app-capable" content="yes">`, `apple-mobile-web-app-status-bar-style`, and `<meta name="theme-color">`. Use `viewport-fit=cover` and `env(safe-area-inset-*)` padding for the notch.
+  - **Service worker:** a minimal hand-written `public/sw.js`, registered client-side after hydration. It caches only the app shell and static assets.
+    - **Never cache** loaders, API, GraphQL, D1 or RPC responses. PnL and NAV must always be live.
+  - **Install prompt:**
+    - Android/desktop: an "Install app" button that uses `beforeinstallprompt`.
+    - iOS Safari: a one-time "Share → Add to Home Screen" hint.
+    - Hide both when `matchMedia('(display-mode: standalone)')` is true.
+  - **Test Privy login inside the installed app on both iOS and Android.** OAuth redirects can escape standalone mode on iOS, so prefer passkey or email login there.
+- **Styling:** Tailwind CSS v4 via `@tailwindcss/vite`.
+  - No `tailwind.config.js`. Configure in CSS with `@import "tailwindcss";` and `@theme { ... }` tokens.
+  - Don't add a component library without a stated reason.
+- **Data:**
+  - Server loaders read the D1 snapshot cache (binding `"d1_databases": [{ "binding": "DB", ... }]`, accessed as `context.cloudflare.env.DB`) or Envio GraphQL.
+  - Loaders never need a wallet.
+- **Backer accounts: Mera, not Privy** (decided 2026-09-29, for the Agora $10k and Mera UX $2.5k bounties).
+  - Mera (passkeys, https://mera.category.xyz, github.com/category-labs/mera) is the **entire** backer account layer: no seed phrase, no extension, no custody backend, and no Privy in the backer flow.
+  - Onboarding is a single passkey ceremony. Use Mera **signing sessions** for prompt-free deposit/withdraw inside a clearly scoped session, and design a clean session-expiry UX.
+  - It must pass the **stateless test**: judges clear storage or open a fresh device mid-demo, and identity must rebuild from the passkey.
+  - Agora demo path: passkey login → AUSD balance shown → deposit → at least one Perpl trade visible.
+  - Measure time-to-first-tx (taps and seconds), because Mera judges score it.
+- **Privy lives server-side** (house-agent session keys in Privy server wallets with policies; see `.claude/rules/agents.md`). Don't add Privy to the backer UI.
+- **Units:** AUSD has 6 decimals. Format with `formatUnits(x, 6)` and never assume 18.
+- **Leaderboard:** house agents must be visibly labelled as house agents, including on their preview images.

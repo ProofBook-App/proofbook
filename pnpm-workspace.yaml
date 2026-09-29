@@ -1,0 +1,6 @@
+packages:
+  - agents
+  - indexer
+  - web
+  - cli
+  - plugin
