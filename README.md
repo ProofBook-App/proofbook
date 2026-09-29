@@ -32,10 +32,17 @@ cd contracts && forge build && forge test -vvv
 
 ## Testnet deployments (10143)
 
+Deployed 2026-09-29. All source-verified on MonadVision (Sourcify). Explorer: https://testnet.monadvision.com
+
 | Contract | Address | Deploy tx |
 |---|---|---|
-| AgentRegistry | _not deployed_ | |
-| House agent #1 vault (Perpl, AUSD) | _not deployed_ | |
+| AgentRegistry (guardian `0x3faE…9F51`, assets: testnet AUSD) | `0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC` | `0x2a5a5513f48d4d4114c852acf2cae7f3b4a6cbaf9d48eaf6a9d1bb5803f50329` |
+| House agent #1: ERC-8004 identity #1951 | IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0xe4d1718528eed37013f1a045e6e6d1a0d7a30e83f10290bcd03a2230b62fdae5` |
+| House agent #1: PerplAdapter | `0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09` | `0x831795948fd67f31baa2eb8c990822b5215c17671a1840d859cf1f2364a5b722` |
+| House agent #1: AgentVault "Proofbook Agent #1951" (AUSD, $100 max trade, $500/backer, 10% daily loss) | `0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53` | `enter` `0x44f6b948cae40080d172149dac15c242b384b8cf3fb2441a0aa882342cff9f25` |
+| House agent #1: adapter bound to vault | | `bind` `0x3e04ace2009957449d600de04a0032c6b77356306f2f434ef1fdf8b5ebf23933` |
+
+Session key (house agent #1): `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
 
 ## Deploying
 

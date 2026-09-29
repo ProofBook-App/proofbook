@@ -9,7 +9,8 @@ paths:
 
 - **Default LLM: Kimi K2.6 on Cloudflare Workers AI** (we have a paid Cloudflare plan). This counts as "genuinely powered by KIMI" for the Kimi bounty; the bounty also needs a published blog post.
   - Model `@cf/moonshotai/kimi-k2.6`: tool calling, reasoning, 262k context. Also available: `@cf/moonshotai/kimi-k2.7-code`.
-  - OpenAI-compatible base URL `https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1` with `Authorization: Bearer $CLOUDFLARE_API_TOKEN`. Inside a Worker, use the `env.AI.run()` binding instead.
+  - **House agents run as Workers (Cron Trigger) and call Kimi through the `ai` binding** (`"ai": { "binding": "AI" }` in wrangler.jsonc, then `env.AI.run("@cf/moonshotai/kimi-k2.6", …)`). No API token. Deploy with `wrangler deploy` after `wrangler login`.
+  - Only code running outside Workers (local scripts, the CLI) needs the REST API: `https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1` with `Authorization: Bearer $CLOUDFLARE_API_TOKEN`. Local dev can use `wrangler dev`, which proxies the binding.
   - K2.6 controls reasoning with `chat_template_kwargs.thinking` and returns it in the `reasoning` field (K2.5 used different names).
 - **LLM clients:** Workers AI, Qwen and Kimi (Moonshot direct) are all OpenAI-compatible. Use one client and swap `baseURL`. Qwen is still usable, but its bounty is Track 04-locked.
   - Qwen: `https://dashscope-us.aliyuncs.com/compatible-mode/v1`, model `qwen3.8-max`
