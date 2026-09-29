@@ -33,6 +33,7 @@ cd contracts && forge build && forge test -vvv       # or: pnpm contracts:test
 forge test --match-contract Invariant                  # spec §6 invariant suite
 pnpm contracts:fork                                     # adapter fork tests (test/fork/*, $MONAD_RPC_URL or public RPC); excluded from CI
 forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow   # then script/HouseAgent.s.sol; see README Deploying
+forge script script/SimStack.s.sol --rpc-url monad_testnet ...   # testnet-only sim venues + tokens (src/sim/); see README "Testnet simulation stack"
 cd indexer && pnpm envio codegen && pnpm dev           # needs Docker
 cd web && pnpm dev
 ```

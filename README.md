@@ -44,6 +44,38 @@ Deployed 2026-09-29. All source-verified on MonadVision (Sourcify). Explorer: ht
 
 Session key (house agent #1): `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
 
+### Testnet simulation stack (10143)
+
+Agora's testnet AUSD faucet is empty and Kuru v1 has no testnet market, so testnet also runs a **simulation stack**. The registry, vaults and adapters are the unchanged production contracts. Only the venues and tokens are stand-ins (`contracts/src/sim/`, testnet only):
+
+- **`SimPerplExchange`** speaks the Perpl Exchange ABI and trades at live prices read from the real Perpl testnet Exchange.
+- **`SimKuruOrderBook`** speaks the Kuru v1 OrderBook ABI and is centred on the Perpl MON mark.
+- **simAUSD / simUSDC** are valueless 6-dp tokens with a public `faucet(to, amount)` (up to 10,000 per call).
+
+`test/fork/SimParity.fork.t.sol` runs identical calls against the real venues and the sims: same revert data, netting, flips, leverage caps and margin model. Moving to mainnet swaps `Chains.testnetSim()` for `Chains.get(143)`. What the sims leave out is listed in each contract's NatSpec: resting orders, funding, liquidations, book depth.
+
+Deployed 2026-09-29 by `script/SimStack.s.sol`. All are Sourcify-verified.
+
+| Contract | Address | Deploy tx |
+|---|---|---|
+| simAUSD "Proofbook Sim AUSD (testnet, no value)" | `0x6EB7ffECEeC1E4601edF488d6bf731ec6e674b43` | `0xc91e6818cbcefc6745b2b0f77aab569d51690241567ab2f6b562e7facfc024eb` |
+| simUSDC "Proofbook Sim USDC (testnet, no value)" | `0xea363EE500E4683becCffb696E8F6Bb23Edde2E4` | `0x29d2dc3b9d6a3ada8397481f02240d85988ed610d81e92b2f73a3a9ee2d89fcc` |
+| SimPerplExchange (BTC 16, ETH 32, SOL 48, MON 64 listed) | `0xD7A49a32c77609305DA87411F7Ac34DC7c047683` | `0xab317213df0107d57af737dc1c5262325bd6458baa2f090021a5fab7d2f1d54e` |
+| SimKuruOrderBook (MON / simUSDC) | `0x4c49895eB85f5F20303B55AAa47474e031fe8318` | `0xd7cec2d54f8fb23d09233feaea9afde446b7568bbb6c648458108e620ef7cbb8` |
+| AgentRegistry (guardian `0x3faE…9F51`, assets: simAUSD, simUSDC) | `0x73d7271D01DdE92d2dEc1Ac3046459cbD3303B35` | `0x2d7a315f3bee7facaca2c8473e5d238b2dd2d2c9dae654377c2d8730be34a090` |
+| Sim house agent (Perpl): identity #1953 | IdentityRegistry `0x8004A818…9BD9e` | `0x36615fca0b05aa6c3afb1f32ae319025443e193b802dd007de17fa4d2a8054d7` |
+| Sim house agent (Perpl): PerplAdapter | `0x76E5FFD510e4c093fbb5C8090Cdc56E82362df53` | `0x0186191d71e60446ed4bc0980468b8ea7a334dc2cdda9b92834a82ff9c7bc606` |
+| Sim house agent (Perpl): AgentVault "Proofbook Agent #1953" (simAUSD) | `0x4DcFDF391b30d709886656C9Cc2645BC0F0Cde77` | `enter` `0x4319cacd92809e8a65ddca88a439cdc953c2ccede42d42d10ae58622e3504d43`, `bind` `0x7d19c205fa52fe8a4f9629f2c83a98c40bba5f35e3b476691305b9cc2383b9ce` |
+| Sim house agent (Kuru): identity #1954 | IdentityRegistry `0x8004A818…9BD9e` | `0x37be817757b653d42605e1ff70f38520d94f0ca879f8c6aff844c7bf9eb82bf8` |
+| Sim house agent (Kuru): KuruAdapter | `0x3AF66e9371B229e80147D760C9d013f4305fa6db` | `0xd67962961abab2d4fe914a18b2d39ec43014184c0d063e3ded923ecba38eb95c` |
+| Sim house agent (Kuru): AgentVault "Proofbook Agent #1954" (simUSDC) | `0x7FC58CeC0b0a89b44322375Bf0FE8a42e27B5bcA` | `enter` `0xbf9e146840bccd04bf8ca6387a264d8c378574598935e044d6cfdafba09f75a7`, `bind` `0x510f64c5e878c8580f3f9045b05b606d3da7f77b2fac4912ac3763c987026144` |
+
+Both sim vaults use $100 max trade, $500 per backer and a 10% daily loss cap. The session key is `0xB41a…2Bf2`, the same as house agent #1.
+
+**First sim activity** (`script/SimDemo.s.sol`): a 400 simAUSD deposit (`0x1b0615e44e4852f27ddb07364d9a262895a38c87d8a8cd939e2d840cf644ba39`), a 100 simAUSD margin move (`0x968a3567d62ce6a5f04334fc0c3036476a718dae83aca2c098c57c79ab077403`), and a 1,835-MON long (`0x59c2a419f1354b09740e5266ecb01f612ee3dcd50d2756c9c8d16a0e35c37c7e`).
+
+The Kuru sim book holds no MON yet. To enable buys, send it testnet MON; sells work without it.
+
 ## Deploying
 
 ```bash
@@ -54,7 +86,18 @@ forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --private-k
 forge script script/HouseAgent.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow
 ```
 
-`script/Chains.sol` holds the per-chain addresses. Kuru v1 is mainnet-only, so `VENUE=kuru` works on 143 only. `test/fork/Deploy.fork.t.sol` runs both scripts on testnet and mainnet forks.
+`script/Chains.sol` holds the per-chain addresses. Kuru v1 is mainnet-only, so `VENUE=kuru` works on 143 only, or on testnet with `SIM=true`. `test/fork/Deploy.fork.t.sol` runs every script on testnet and mainnet forks.
+
+Testnet sim stack (testnet only):
+
+```bash
+# venues, tokens, registry and both sim house agents (GUARDIAN_ADDRESS, SESSION_KEY in env)
+forge script script/SimStack.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow
+# another house agent on the sim venues
+SIM=true forge script script/HouseAgent.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow
+# seed a deposit and a MON long on a sim Perpl vault (VAULT, BACKER_PK, SESSION_KEY_PK)
+forge script script/SimDemo.s.sol --rpc-url monad_testnet --broadcast --slow
+```
 
 ## Threat model
 

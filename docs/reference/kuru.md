@@ -81,3 +81,22 @@ Reference: https://github.com/Synsight-lab/Optara/pull/2
 
 - **Kuru "v2"** (`Kuru-Labs/ts-sdk`, npm `@toxicflow-labs/ts-sdk`, AccountCore, 7702) is still testnet-only as of 2026-09-29. Mainnet docs list v1 only, and v1 is trading. The SDK is moving fast (commits the same day), so recheck before the demo.
 - **Kuru Flow** (aggregator API with integrator fees): the base URL and auth are unverified ⚠️.
+
+## MON-USDC behaviour probed on a mainnet fork (2026-09-29)
+
+`SimKuruOrderBook` copies these rules, and `test/fork/SimParity.fork.t.sol` re-checks them against the real market.
+
+- **`getMarketParams`:**
+  - Precision: price 1e8, size 1e10.
+  - Tick 100, minSize 2e12, maxSize 2e18.
+  - **Taker and maker fees are 0.**
+- **`bestBidAsk`** prices sit on a 1e12 grid (1e18-scaled, one tick).
+- **A market buy** spends exactly `quoteSize` and returns base floored to 1e8 wei. Example: $10 bought 362.1351488375 MON at ask 0.027614.
+- **A market sell needs `msg.value` exactly equal to `size × 1e8`.** With 100 MON at bid 0.027578, it returned 2.7578 USDC.
+- **A large IOC sell** fills what it can and refunds the rest of the MON. The FOK version reverts.
+- **Errors:**
+  - `0x8199f5f3 SlippageExceeded()` (minAmountOut)
+  - `0xfd993161 NativeAssetInsufficient()` / `0x48223ccc NativeAssetSurplus()` (sell value mismatch)
+  - `0xead59376 NativeAssetNotRequired()` (value sent with a buy)
+  - `0xf4d678b8 InsufficientBalance()` (isMargin without a margin balance)
+  - `0xbb55fd27 InsufficientLiquidity()` (FOK not filled)

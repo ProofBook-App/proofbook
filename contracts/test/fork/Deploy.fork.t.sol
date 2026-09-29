@@ -10,6 +10,9 @@ import {IPerplExchange} from "../../src/interfaces/external/IPerplExchange.sol";
 import {Deploy} from "../../script/Deploy.s.sol";
 import {HouseAgent} from "../../script/HouseAgent.s.sol";
 import {Chains} from "../../script/Chains.sol";
+import {SimStack} from "../../script/SimStack.s.sol";
+import {KuruAdapter} from "../../src/adapters/KuruAdapter.sol";
+import {SimToken} from "../../src/sim/SimToken.sol";
 
 /// @notice Runs the deploy scripts on testnet and mainnet forks (nothing is broadcast), then
 /// trades the testnet house vault on Perpl testnet.
@@ -114,6 +117,63 @@ contract DeployForkTest is Test {
         assertEq(PerplAdapter(adapter).exposure(address(vault)), expected, "every position counted");
         assertApproxEqRel(vault.nav(), 500e6, 0.01e18, "positions valued near cost");
         assertFalse(vault.frozen());
+    }
+
+    /// The testnet sim stack: production registry, vaults and adapters on sim venues with live Perpl prices.
+    function test_testnet_simStack_deployAndTrade() public {
+        vm.createSelectFork("https://testnet-rpc.monad.xyz");
+        // Scripts broadcast from forge's default sender, which therefore owns the sim venues.
+        SimStack.Deployed memory out = new SimStack().deploy(DEFAULT_SENDER, guardian, sessionKey);
+        Chains.Config memory c = out.config;
+        assertTrue(out.registry.isAllowedAsset(IERC20(c.ausd)));
+        assertTrue(out.registry.isAllowedAsset(IERC20(c.usdc)));
+        AgentVault pv = AgentVault(payable(out.perplVault));
+        AgentVault kv = AgentVault(payable(out.kuruVault));
+        assertEq(out.registry.vaultOf(out.perplAgentId), out.perplVault);
+        assertEq(pv.asset(), c.ausd);
+        assertEq(kv.asset(), c.usdc);
+        assertEq(pv.sessionKey(), sessionKey);
+        address pa = out.perplAdapter;
+        address ka = out.kuruAdapter;
+        assertEq(PerplAdapter(pa).vault(), out.perplVault);
+
+        // Perpl: backer deposits simAUSD, agent opens a MON long at live testnet prices.
+        vm.startPrank(alice);
+        SimToken(c.ausd).faucet(alice, 500e6);
+        IERC20(c.ausd).approve(address(pv), type(uint256).max);
+        pv.deposit(500e6, alice);
+        vm.stopPrank();
+        vm.startPrank(sessionKey);
+        pv.execute(pa, abi.encode(uint8(0), abi.encode(uint256(100e6))));
+        IPerplExchange.PerpetualInfo memory p = IPerplExchange(c.perplExchange).getPerpetualInfo(c.perplMonPerpId);
+        IPerplExchange.OrderDesc memory d;
+        d.perpId = c.perplMonPerpId;
+        d.pricePNS = (p.basePricePNS + p.minAskPriceONS) * 1005 / 1000;
+        d.lotLNS = 20e6 * 10 ** (p.priceDecimals + p.lotDecimals) / 1e6 / p.markPNS; // ~$20
+        d.expiryBlock = block.number + 100;
+        d.immediateOrCancel = true;
+        d.leverageHdths = 100;
+        d.maxNegPnlCollatBPS = 300;
+        pv.execute(pa, abi.encode(uint8(2), abi.encode(d)));
+        vm.stopPrank();
+        assertGt(PerplAdapter(pa).exposure(address(pv)), 99e6);
+        assertApproxEqRel(pv.nav(), 500e6, 0.002e18);
+
+        // Kuru: the book needs MON inventory for buys.
+        vm.deal(c.kuruMonUsdc, 10_000 ether);
+        vm.startPrank(alice);
+        SimToken(c.usdc).faucet(alice, 500e6);
+        IERC20(c.usdc).approve(address(kv), type(uint256).max);
+        kv.deposit(500e6, alice);
+        vm.stopPrank();
+        vm.prank(sessionKey);
+        kv.execute(ka, abi.encode(uint8(0), abi.encode(uint256(20e6), uint256(0))));
+        assertGt(ka.balance, 0);
+        assertApproxEqRel(kv.nav(), 500e6, 0.003e18);
+        vm.prank(sessionKey);
+        kv.execute(ka, abi.encode(uint8(1), abi.encode(ka.balance / 1e8 * 1e8, uint256(0))));
+        assertApproxEqRel(IERC20(c.usdc).balanceOf(address(kv)), 500e6, 0.003e18);
+        assertEq(address(KuruAdapter(payable(ka)).market()), c.kuruMonUsdc);
     }
 
     /// AUSD packs {uint8 flags; uint248 balance} in one slot, so forge `deal` can't be used.

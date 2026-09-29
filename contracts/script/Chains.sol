@@ -34,4 +34,17 @@ library Chains {
             revert("Chains: unsupported chain");
         }
     }
+
+    /// @notice TESTNET SIMULATION venues and tokens (src/sim/), deployed by script/SimStack.s.sol on
+    /// 2026-09-29 and checked with `cast code` on 10143.
+    /// Same shape as the real config: the production adapters and scripts run unchanged against it,
+    /// and mainnet uses get(143) instead. Tokens are valueless SimTokens; prices come from real Perpl testnet.
+    function testnetSim() internal pure returns (Config memory c) {
+        c.identity = 0x8004A818BFB912233c491871b3d84c89A494BD9e;
+        c.ausd = 0x6EB7ffECEeC1E4601edF488d6bf731ec6e674b43; // simAUSD
+        c.usdc = 0xea363EE500E4683becCffb696E8F6Bb23Edde2E4; // simUSDC
+        c.perplExchange = 0xD7A49a32c77609305DA87411F7Ac34DC7c047683; // SimPerplExchange
+        c.perplMonPerpId = 64;
+        c.kuruMonUsdc = 0x4c49895eB85f5F20303B55AAa47474e031fe8318; // SimKuruOrderBook
+    }
 }

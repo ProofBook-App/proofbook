@@ -105,3 +105,22 @@ The upstream DelegatedAccount fork test uses testnet values (BTC = `0x10`, testn
 - Event names for indexing (not read yet). PerplAdapter emits its own `MarginDeposited`, `MarginWithdrawn`, `OrderSent`, `Recalled`, `Bound`, so the leaderboard does not depend on them.
 - Perp IDs above 100, and price/lot decimals for HYPE and later markets.
 - Whether liquidation events are public onchain in a usable form.
+
+## Exchange behaviour probed on testnet (2026-09-29)
+
+Found on a testnet fork with direct Exchange calls. `SimPerplExchange` copies these rules, and `test/fork/SimParity.fork.t.sol` re-checks them against the real Exchange.
+
+- **Margin after an open or increase:** `depositCNS = max(old deposit, ceil(entry notional × 100 / leverageHdths) + max(0, −pnl at mark))`. An increase re-targets the whole position's leverage and never releases margin.
+  - Probe: 1000 MON at fill 2779 with mark 2766, 1x, gave 27,920,000. Adding 1000 at 2x gave 28,050,000.
+- **Leverage above the perp's max is clamped, not rejected.** Testnet maximums: BTC 15x, ETH 12x, SOL 10x, MON 3x. A 50x MON order held 9,403,334 = ceil(27.79M / 3) + 140,000.
+- **Taker fee:** `ceil(fill notional × 345 / 1e6)`, i.e. 3.45 bps, charged from `balanceCNS`. It matched to the unit on the opens and on a close.
+- **Opposite opens net against the position.** The opposite side reduces the position and releases margin pro rata. If it's larger than the position, the rest flips it the other way. A close is reduce-only.
+- **A non-crossing IOC order** returns `orderId 0` and doesn't revert.
+- **`getAccountByAddr` for an address with no account reverts** with `AccountDoesNotExist`.
+- **Errors (selector, name):**
+  - `0x03a0e277 AccountDoesNotExist(address)`
+  - `0x646095e8 AccountExists(address,uint256)`
+  - `0xcfe73bb0 InsufficentAmountToOpenAccount(address,uint256)` (the misspelling is Perpl's)
+  - `0xb853e584 AmountExceedsAvailableBalance(uint256 amount, uint256 balance, uint256 available)`
+  - `0x189a4ff8 CloseOrderPositionMismatch(uint8 positionType, uint8 orderType)`
+  - `0x604559a5 CloseOrderExceedsPosition(uint256 positionLot, uint256 orderLot)`

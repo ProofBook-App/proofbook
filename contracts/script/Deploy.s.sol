@@ -18,8 +18,11 @@ contract Deploy is Script {
     }
 
     function deploy(address guardian) public returns (AgentRegistry registry) {
-        Chains.Config memory c = Chains.get(block.chainid);
+        return deploy(guardian, Chains.get(block.chainid));
+    }
 
+    /// @dev `c` is Chains.get for the real venues, or a testnet sim config (script/SimStack.s.sol).
+    function deploy(address guardian, Chains.Config memory c) public returns (AgentRegistry registry) {
         IERC20[] memory assets = new IERC20[](c.usdc == address(0) ? 1 : 2);
         assets[0] = IERC20(c.ausd);
         if (c.usdc != address(0)) assets[1] = IERC20(c.usdc);

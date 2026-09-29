@@ -27,6 +27,7 @@ interface IIdentityRegister {
 ///   MAX_TRADE          optional, asset units (6 dp). Default 100e6
 ///   DAILY_LOSS_BPS     optional. Default 1000 (10%)
 ///   DEPOSIT_CAP        optional, per backer (6 dp). Default 500e6
+///   SIM                optional, true = testnet sim venues and tokens (Chains.testnetSim)
 contract HouseAgent is Script {
     struct Params {
         AgentRegistry registry;
@@ -39,6 +40,7 @@ contract HouseAgent is Script {
     }
 
     function run() external returns (uint256, address, address) {
+        Chains.Config memory c = vm.envOr("SIM", false) ? Chains.testnetSim() : Chains.get(block.chainid);
         return deploy(
             Params({
                 registry: AgentRegistry(vm.envAddress("REGISTRY")),
@@ -48,12 +50,20 @@ contract HouseAgent is Script {
                 maxTrade: vm.envOr("MAX_TRADE", uint256(100e6)),
                 dailyLossBps: uint16(vm.envOr("DAILY_LOSS_BPS", uint256(1_000))),
                 depositCap: vm.envOr("DEPOSIT_CAP", uint256(500e6))
-            })
+            }),
+            c
         );
     }
 
-    function deploy(Params memory p) public returns (uint256 agentId, address vault, address adapter) {
-        Chains.Config memory c = Chains.get(block.chainid);
+    function deploy(Params memory p) public returns (uint256, address, address) {
+        return deploy(p, Chains.get(block.chainid));
+    }
+
+    /// @dev `c` is Chains.get for the real venues, or a testnet sim config (script/SimStack.s.sol).
+    function deploy(Params memory p, Chains.Config memory c)
+        public
+        returns (uint256 agentId, address vault, address adapter)
+    {
         require(!p.kuru || c.kuruMonUsdc != address(0), "HouseAgent: Kuru v1 not on this chain");
 
         address[] memory venues = new address[](1);
