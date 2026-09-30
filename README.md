@@ -57,7 +57,7 @@ Afterwards Perpl holds a 1,828-lot long for account #740 with 50.09 AUSD of marg
 
 ### Indexer (testnet)
 
-Envio HyperIndex on Envio Cloud (`indexer/`, deployed from the `envio` branch). GraphQL endpoint: https://indexer.dev.hyperindex.xyz/775ad7b/v1/graphql. It serves agents, vaults (NAV, share price, drawdown, PnL, backers), trades, policy events, and Perpl positions and fills for our accounts, all from events.
+Envio HyperIndex on Envio Cloud (`indexer/`, deployed from the `envio` branch). GraphQL endpoint: https://indexer.dev.hyperindex.xyz/71e3cf1/v1/graphql. It serves agents, vaults (NAV, share price, drawdown, PnL, backers), trades, policy events, and Perpl positions and fills for our accounts, all from events.
 
 ### Leaderboard API (web Worker)
 
