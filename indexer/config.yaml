@@ -62,14 +62,7 @@ chains:
   # Monad testnet: registry 0x25D4…8ABC (deploy block 66759038), real Perpl testnet.
   - id: 10143
     start_block: 66759038
-    # HyperSync needs ENVIO_API_TOKEN. Without one, sync over a public RPC. thirdweb serves 1,000-block
-    # eth_getLogs; testnet-rpc.monad.xyz caps at 100 blocks and 50 req/s, which stalls the first sync.
-    # Once the token is in .env, delete this rpc block and HyperSync takes over.
-    rpc:
-      - url: ${MONAD_TESTNET_RPC_URL:-https://10143.rpc.thirdweb.com}
-        for: sync
-        initial_block_interval: 1000
-        interval_ceiling: 1000
+    # Data source: HyperSync (https://10143.hypersync.xyz), needs ENVIO_API_TOKEN in indexer/.env.
     contracts:
       - name: AgentRegistry
         address:

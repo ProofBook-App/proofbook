@@ -69,6 +69,6 @@ pnpm test
 
 ## Data source
 
-- **Testnet (10143) without a token:** the indexer syncs over the thirdweb public RPC (1,000-block `eth_getLogs`). `testnet-rpc.monad.xyz` caps log ranges at 100 blocks and rate-limits at 50 req/s, which stalls the first sync.
-- **With HyperSync:** create a token at https://envio.dev/app/api-tokens, put `ENVIO_API_TOKEN=` in `indexer/.env`, and delete the chain's `rpc:` block in `config.yaml`.
+- **HyperSync** on both chains. Put `ENVIO_API_TOKEN=` in `indexer/.env`, and create the token at https://envio.dev/app/api-tokens.
+- **Public RPCs don't work as the sync source.** `testnet-rpc.monad.xyz` caps `eth_getLogs` at 100 blocks and 50 req/s. thirdweb allows 1,000-block ranges but rate-limits harder. Syncing testnet that way took hours.
 - **Mainnet (143):** uses HyperSync (`https://143.hypersync.xyz`), and add the chain once the registry is deployed.
