@@ -261,10 +261,11 @@ async function readMeta(db: D1Database, chainId: number) {
   return db.prepare(`SELECT * FROM snapshot_meta WHERE chain_id = ?1`).bind(chainId).first<MetaRow>();
 }
 
-// Before the first cron run (a fresh deploy, or local dev) there is no snapshot: take one inline.
+// Before the first cron run (a fresh deploy, or local dev) there is no snapshot, and if the cron
+// stops the snapshot goes stale. Either way, take one inline.
 async function ensureSnapshot(env: SnapshotEnv, chainId: number) {
   const meta = await readMeta(env.DB, chainId);
-  if (meta?.synced_at) return meta;
+  if (meta?.synced_at && !toMeta(chainId, meta).stale) return meta;
   try {
     await syncSnapshot(env);
   } catch {

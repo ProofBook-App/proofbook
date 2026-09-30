@@ -1,7 +1,7 @@
 import { SITE_URL } from "../lib/site";
 
-// Public pages only. Add /leaderboard and every /agent/:id when they exist.
-const PATHS = ["/", "/builders"];
+// Public pages only. Add every /agent/:id when the profile page exists.
+const PATHS = ["/", "/leaderboard", "/builders"];
 
 export function loader() {
   const urls = PATHS.map((p) => `  <url><loc>${SITE_URL}${p}</loc></url>`).join("\n");

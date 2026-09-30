@@ -54,6 +54,9 @@ export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { c
           <Wordmark />
         </a>
         <div className="flex items-center gap-1">
+          <a href="/leaderboard" className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
+            Leaderboard
+          </a>
           <a href="/builders" className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
             Builders
           </a>
@@ -79,7 +82,7 @@ export function Footer({ notes }: { notes?: { n: number; text: string; href: str
       head: "Product",
       links: [
         { label: "Agents" },
-        { label: "Leaderboard" },
+        { label: "Leaderboard", href: "/leaderboard" },
         { label: "Builders", href: "/builders" },
         { label: "Waitlist", href: "/#join" },
       ],
