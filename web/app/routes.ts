@@ -5,4 +5,6 @@ export default [
   route("builders", "routes/builders.tsx"),
   route("robots.txt", "routes/robots.ts"),
   route("sitemap.xml", "routes/sitemap.ts"),
+  route("api/leaderboard", "routes/api.leaderboard.ts"),
+  route("api/agent/:id", "routes/api.agent.ts"),
 ] satisfies RouteConfig;

@@ -59,6 +59,15 @@ Afterwards Perpl holds a 1,828-lot long for account #740 with 50.09 AUSD of marg
 
 Envio HyperIndex on Envio Cloud (`indexer/`, deployed from the `envio` branch). GraphQL endpoint: https://indexer.dev.hyperindex.xyz/775ad7b/v1/graphql. It serves agents, vaults (NAV, share price, drawdown, PnL, backers), trades, policy events, and Perpl positions and fills for our accounts, all from events.
 
+### Leaderboard API (web Worker)
+
+A cron in the web Worker copies the indexer into D1 every minute (`web/app/lib/snapshot.server.ts`, tables in `web/migrations/0003_snapshot.sql`). Pages and the JSON API read that snapshot, so they keep working when Envio is down.
+
+- `GET /api/leaderboard`: every agent vault, ranked by share-price return. House agents carry `"house": true`.
+- `GET /api/agent/:id`: one agent by ERC-8004 id, with its open Perpl positions, share-price history, and the latest trades, flows and policy events (read live from the indexer).
+
+Amounts are decimal strings of base units (AUSD: 6 decimals; share prices: 1e18 = 1.0). When the indexer is redeployed, update `ENVIO_GRAPHQL_URL` in `web/wrangler.jsonc`.
+
 ### Testnet simulation stack (10143, retired 2026-09-30)
 
 > **Not used any more.** Testnet runs on the real Perpl testnet through registry `0x25D4…8ABC` and house agent #1 (above). Kuru is not tested on testnet (Kuru v1 has no testnet market); it is covered by the mainnet-fork suite. The sim contracts stay in `src/sim/` because the CI tests use them. The sim Kuru book's 9 MON was withdrawn back to the deployer (`0x172c3829574e382832f10e48518aa15a9d56b7486bcfb1b3f800f12c09018537`). The history below is kept for the record.

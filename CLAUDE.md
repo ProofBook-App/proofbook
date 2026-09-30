@@ -39,7 +39,8 @@ forge script script/SimStack.s.sol --rpc-url monad_testnet ...   # testnet-only 
 cd indexer && pnpm codegen && pnpm dev                 # needs Docker; GraphQL at http://localhost:8080 (admin secret `testing`)
 cd indexer && pnpm test                                 # replays house agent #1's real testnet history
 cd indexer && pnpm abis                                 # after changing contract events: forge build, then this, then codegen
-cd web && pnpm dev
+cd web && pnpm dev                                      # /api/leaderboard, /api/agent/:id; first request fills local D1 from the indexer
+cd web && npx wrangler d1 migrations apply proofbook --local   # after adding web/migrations/*.sql (--remote for production)
 ```
 
 ## Invariants (spec §6): never violate, tests first

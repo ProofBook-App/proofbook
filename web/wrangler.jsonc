@@ -13,6 +13,13 @@
 			"migrations_dir": "migrations"
 		}
 	],
+	// The Envio Cloud URL changes with every indexer deployment (indexer/README.md, Deploy).
+	"vars": {
+		"CHAIN_ID": "10143",
+		"ENVIO_GRAPHQL_URL": "https://indexer.dev.hyperindex.xyz/775ad7b/v1/graphql"
+	},
+	// Copies the indexer into D1 (app/lib/snapshot.server.ts).
+	"triggers": { "crons": ["* * * * *"] },
 	"routes": [
 		{ "pattern": "proofbook.app", "custom_domain": true },
 		{ "pattern": "www.proofbook.app", "custom_domain": true }

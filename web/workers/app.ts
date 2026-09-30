@@ -1,4 +1,5 @@
 import { createRequestHandler } from "react-router";
+import { syncSnapshot } from "../app/lib/snapshot.server";
 
 declare module "react-router" {
   export interface AppLoadContext {
@@ -20,5 +21,10 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
     return requestHandler(request, { cloudflare: { env, ctx } });
+  },
+
+  // Every minute: copy the Envio indexer into the D1 snapshot the leaderboard reads.
+  async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(syncSnapshot(env).then((r) => console.log("snapshot", JSON.stringify(r))));
   },
 } satisfies ExportedHandler<Env>;
