@@ -79,7 +79,7 @@ The "Back this agent" panel on every `/agent/:id` page runs in the browser only 
   4. the amount;
   5. a receipt with the explorer link.
 
-  A new backer on testnet takes two taps, "Create an account" and "Deposit", plus typing the amount.
+  A new backer on testnet takes three taps, "Back this agent", "Create an account" and "Deposit", plus typing the amount. Opening the modal never starts a passkey prompt on its own.
 
 - **Account:** a [Mera](https://mera.category.xyz) passkey. The key is derived from the passkey's PRF output (BIP-39 entropy, path `m/44'/60'/0'/0/0`). Only the credential id and the address are stored on the device, so a cleared browser or a new device gets the same account back from the passkey. No seed phrase, extension or custody server.
 - **Session:** one passkey prompt creates or unlocks the account and starts a 15-minute signing session. Inside it, approve, deposit and withdraw sign with no prompts. Our page code limits the session to this vault's asset `approve` (exact amount, never unlimited), `deposit` to self, `withdraw`/`redeem` of own shares to self, and the testnet AUSD faucet, all with zero native value. Every call is simulated before it is signed. These limits live in page JavaScript: they stop the app signing the wrong thing, not a script already running on the page. The vault's onchain rules (deposit cap, withdrawals always open when idle) apply regardless.

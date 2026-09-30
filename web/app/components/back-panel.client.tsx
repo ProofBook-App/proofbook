@@ -125,7 +125,6 @@ export default function BackPanel(props: BackPanelProps) {
 
   async function begin(how: "create" | "login") {
     tap();
-    setOpen(true);
     setError(null);
     setEnded(null);
     setBusy(how === "create" ? "Creating your account. Confirm with your passkey…" : "Waiting for your passkey…");
@@ -206,16 +205,15 @@ export default function BackPanel(props: BackPanelProps) {
                 Your account is a passkey: Face ID, Touch ID or your phone. No seed phrase and no extension. One prompt
                 creates it and unlocks it for {SESSION_MINUTES} minutes.
               </p>
-              <div className="mt-5 flex flex-col gap-2">
-                <button className={primary} disabled={!!busy} onClick={() => begin("create")}>
-                  Create an account
-                </button>
-                <button className={secondary} disabled={!!busy} onClick={() => begin("login")}>
-                  Log in with a passkey
-                </button>
-              </div>
+              <button className={`${primary} mt-5 w-full`} disabled={!!busy} onClick={() => begin("create")}>
+                Create an account
+              </button>
               <p className="mt-3 text-[13px] text-muted">
-                Made one before, here or on another device? Log in. The same passkey always gives the same account.
+                Made one before, here or on another device?{" "}
+                <button className="text-ink underline decoration-current/30 underline-offset-2 hover:decoration-current disabled:opacity-50" disabled={!!busy} onClick={() => begin("login")}>
+                  Log in with your passkey
+                </button>
+                {". "}The same passkey always gives the same account.
               </p>
             </Step>
           );
@@ -372,20 +370,11 @@ export default function BackPanel(props: BackPanelProps) {
     return (
       <Shell title="Back this agent">
         <p className="text-[15px] text-muted">
-          Your account is a passkey: Face ID, Touch ID or your phone. No seed phrase and no extension. One prompt creates it
-          and unlocks it for {SESSION_MINUTES} minutes.
+          Your account is a passkey: Face ID, Touch ID or your phone. No seed phrase and no extension.
         </p>
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <button className={primary} disabled={!!busy} onClick={() => begin("create")}>
-            Create an account
-          </button>
-          <button className={secondary} disabled={!!busy} onClick={() => begin("login")}>
-            Log in with a passkey
-          </button>
-        </div>
-        <p className="mt-3 text-[13px] text-muted">
-          Made one before, here or on another device? Log in. The same passkey always gives the same account.
-        </p>
+        <button className={`${primary} mt-5`} onClick={() => openFlow("deposit")}>
+          Back this agent
+        </button>
         {flow}
       </Shell>
     );
