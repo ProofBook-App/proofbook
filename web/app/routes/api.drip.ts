@@ -4,6 +4,10 @@ import { readAgent } from "../lib/snapshot.server";
 
 // POST /api/drip {address, agentId}: testnet MON for gas plus AUSD from Agora's faucet, for a new
 // backer account (app/lib/drip.server.ts). 404 anywhere but testnet or when the drip is off.
+export function loader() {
+  return Response.json({ error: "POST only" }, { status: 405, headers: { allow: "POST" } });
+}
+
 export async function action({ request, context }: Route.ActionArgs) {
   const headers = { "cache-control": "no-store" };
   if (request.method !== "POST") return Response.json({ error: "POST only" }, { status: 405, headers });
