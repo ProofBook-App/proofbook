@@ -55,7 +55,9 @@ Session key (house agent #1): `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`. Perp
 
 Afterwards Perpl holds a 1,828-lot long for account #740 with 50.09 AUSD of margin, and vault NAV is 399.87 AUSD.
 
-### Testnet simulation stack (10143)
+### Testnet simulation stack (10143, retired 2026-09-30)
+
+> **Not used any more.** Testnet runs on the real Perpl testnet through registry `0x25D4…8ABC` and house agent #1 (above). Kuru is not tested on testnet (Kuru v1 has no testnet market); it is covered by the mainnet-fork suite. The sim contracts stay in `src/sim/` because the CI tests use them. The sim Kuru book's 9 MON was withdrawn back to the deployer (`0x172c3829574e382832f10e48518aa15a9d56b7486bcfb1b3f800f12c09018537`). The history below is kept for the record.
 
 Kuru v1 has no testnet market (and Agora's testnet AUSD faucet was empty until 2026-09-30), so testnet also runs a **simulation stack**. The registry, vaults and adapters are the unchanged production contracts. Only the venues and tokens are stand-ins (`contracts/src/sim/`, testnet only):
 
