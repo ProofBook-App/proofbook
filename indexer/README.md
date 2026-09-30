@@ -72,3 +72,24 @@ pnpm test
 - **HyperSync** on both chains. Put `ENVIO_API_TOKEN=` in `indexer/.env`, and create the token at https://envio.dev/app/api-tokens.
 - **Public RPCs don't work as the sync source.** `testnet-rpc.monad.xyz` caps `eth_getLogs` at 100 blocks and 50 req/s. thirdweb allows 1,000-block ranges but rate-limits harder. Syncing testnet that way took hours.
 - **Mainnet (143):** uses HyperSync (`https://143.hypersync.xyz`), and add the chain once the registry is deployed.
+
+## Deploy (Envio Cloud)
+
+Envio Cloud builds from the `envio` branch. Its settings are:
+- Indexer Directory: `indexer`
+- Config File: `config.yaml`
+- Git Release Branch: `envio`
+
+To deploy what's on main:
+
+```bash
+git push origin main:envio
+```
+
+- **Build:** Envio Cloud ignores `pnpm-lock.yaml` and resolves dependencies itself, so every version in `package.json` is pinned exactly.
+- **Uploaded files:** only `indexer/` is uploaded. Anything the indexer needs (ABIs, handlers) must live inside it, and nothing may be in a folder named `generated`.
+- **Plan (2026-09-30):**
+  - We're on the free Development plan: 100k-event soft limit, 30-day lifespan.
+  - Our Perpl Exchange volume passes the soft limit within a day, so the deployment is deleted about 10 days later.
+  - We're asking Envio for a hackathon credit. Without one, upgrade or redeploy before judging (Oct 14–27).
+
