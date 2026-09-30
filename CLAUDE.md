@@ -24,7 +24,7 @@ Domain: `proofbook.app` (Cloudflare Registrar, served by the web Worker). GitHub
 - `docs/brand/voice.md`: how we write (banned AI-writing patterns). `docs/brand/research.md`: sourced figures, and only those marked verified go on the site. `web/DESIGN.md`: colour, type, layout. `PRODUCT.md`: product record for design work. Read them before writing copy or UI.
 - `.claude/rules/`: per-package rules that load automatically when working in `contracts/`, `indexer/`, `web/`, `agents|cli|plugin/`
 
-Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`) and `web/`.
+Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`), `indexer/` and `web/`.
 
 ## Commands
 
@@ -36,7 +36,9 @@ forge test --match-contract Invariant                  # spec §6 invariant suit
 pnpm contracts:fork                                     # adapter fork tests (test/fork/*, $MONAD_RPC_URL or public RPC); excluded from CI
 forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow   # then script/HouseAgent.s.sol; see README Deploying
 forge script script/SimStack.s.sol --rpc-url monad_testnet ...   # testnet-only sim venues + tokens (src/sim/); see README "Testnet simulation stack"
-cd indexer && pnpm envio codegen && pnpm dev           # needs Docker
+cd indexer && pnpm codegen && pnpm dev                 # needs Docker; GraphQL at http://localhost:8080 (admin secret `testing`)
+cd indexer && pnpm test                                 # replays house agent #1's real testnet history
+cd indexer && pnpm abis                                 # after changing contract events: forge build, then this, then codegen
 cd web && pnpm dev
 ```
 

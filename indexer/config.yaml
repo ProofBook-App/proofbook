@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: proofbook
+description: Proofbook leaderboard. Agents, vaults, trades, policy events and backers, from events only (spec §6 invariant 7).
+disable_default_cross_chain: true
+field_selection:
+  transaction_fields:
+    - hash
+contracts:
+  - name: AgentRegistry
+    abi_file_path: abis/AgentRegistry.json
+    events:
+      - event: AssetAllowed
+      - event: AgentRegistered
+      - event: VaultLinked
+  # One per agent, registered from VaultLinked.
+  - name: AgentVault
+    abi_file_path: abis/AgentVault.json
+    events:
+      - event: Deposit
+      - event: Withdraw
+      - event: Transfer
+      - event: Executed
+      - event: PolicyBreach
+      - event: Frozen
+      - event: Unfrozen
+      - event: FeeTaken
+      - event: SessionKeyRotated
+      - event: DayRolled
+  # PerplAdapter and KuruAdapter events, registered from AgentRegistered's envelope.venues.
+  - name: VenueAdapter
+    abi_file_path: abis/VenueAdapter.json
+    events:
+      - event: Bound
+      - event: MarginDeposited
+      - event: MarginWithdrawn
+      - event: Recalled
+      - event: PerpTracked
+      - event: OrderSent
+      - event: Bought
+      - event: Sold
+      - event: Unwound
+chains:
+  # Monad testnet: registry 0x25D4…8ABC (deploy block 66759038), real Perpl testnet.
+  - id: 10143
+    start_block: 66759038
+    # HyperSync needs ENVIO_API_TOKEN. Without one, sync over a public RPC. thirdweb serves 1,000-block
+    # eth_getLogs; testnet-rpc.monad.xyz caps at 100 blocks and 50 req/s, which stalls the first sync.
+    # Once the token is in .env, delete this rpc block and HyperSync takes over.
+    rpc:
+      - url: ${MONAD_TESTNET_RPC_URL:-https://10143.rpc.thirdweb.com}
+        for: sync
+        initial_block_interval: 1000
+        interval_ceiling: 1000
+    contracts:
+      - name: AgentRegistry
+        address:
+          - 0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC
+      - name: AgentVault
+      - name: VenueAdapter

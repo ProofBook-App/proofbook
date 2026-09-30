@@ -1,0 +1,162 @@
+# Proofbook leaderboard, derived from events only (spec §6 invariant 7).
+# Amounts are in the vault asset's base units (AUSD and USDC: 6 decimals).
+# Share prices are WAD (1e18 = one asset unit per asset unit deposited); vault shares have 12 decimals.
+
+enum AdapterKind {
+  Unknown
+  Perpl
+  Kuru
+}
+
+enum FlowKind {
+  Deposit
+  Withdraw
+  Fee
+}
+
+enum PolicyKind {
+  DailyLossBreach
+  Frozen
+  Unfrozen
+  SessionKeyRotated
+}
+
+type Agent {
+  id: ID! # ERC-8004 agent id
+  owner: String!
+  maxTradeNotional: BigInt!
+  dailyLossCapBps: Int!
+  depositCapPerBacker: BigInt!
+  venues: [String!]!
+  vault: Vault
+  registeredAt: Int!
+  registeredTx: String!
+}
+
+type Vault {
+  id: ID! # vault address
+  agent: Agent!
+  asset: String!
+  sessionKey: String!
+  frozen: Boolean!
+  # NAV as of the last event: the last Executed navAfter, moved by flows since.
+  # Mark-to-market moves between trades show up at the next execute.
+  nav: BigInt!
+  totalShares: BigInt!
+  sharePrice: BigInt!
+  peakSharePrice: BigInt!
+  maxDrawdownBps: Int!
+  deposited: BigInt!
+  withdrawn: BigInt!
+  feesPaid: BigInt!
+  # nav + withdrawn + feesPaid - deposited: what trading made or lost for backers, before fees.
+  pnl: BigInt!
+  highWaterMark: BigInt! # raw AgentVault units (assets * 1e18 / shares): 1e12 is 1.0
+  dayStart: Int!
+  dayStartNav: BigInt!
+  tradeCount: Int!
+  tradeVolume: BigInt!
+  breachCount: Int!
+  freezeCount: Int!
+  backerCount: Int!
+  createdAt: Int!
+  updatedAt: Int!
+  backers: [Backer!]! @derivedFrom(field: "vault")
+  trades: [Trade!]! @derivedFrom(field: "vault")
+  flows: [Flow!]! @derivedFrom(field: "vault")
+  policyEvents: [PolicyEvent!]! @derivedFrom(field: "vault")
+  navPoints: [NavPoint!]! @derivedFrom(field: "vault")
+  adapters: [Adapter!]! @derivedFrom(field: "vault")
+}
+
+type Backer {
+  id: ID! # vault-account
+  vault: Vault!
+  account: String! @index
+  shares: BigInt!
+  deposited: BigInt!
+  withdrawn: BigInt!
+  firstSeenAt: Int!
+}
+
+# One per AgentVault.Executed.
+type Trade {
+  id: ID! # chainId-block-logIndex
+  vault: Vault!
+  venue: String!
+  notional: BigInt!
+  venueDelta: BigInt!
+  navBefore: BigInt!
+  navAfter: BigInt!
+  timestamp: Int!
+  block: Int!
+  txHash: String! @index
+}
+
+type Flow {
+  id: ID!
+  vault: Vault!
+  kind: FlowKind!
+  account: String!
+  assets: BigInt!
+  shares: BigInt!
+  timestamp: Int!
+  txHash: String!
+}
+
+type PolicyEvent {
+  id: ID!
+  vault: Vault!
+  kind: PolicyKind!
+  by: String
+  nav: BigInt
+  dayStartNav: BigInt
+  timestamp: Int!
+  txHash: String!
+}
+
+# Share-price history for charts and drawdown: one point per event that moves NAV.
+type NavPoint {
+  id: ID!
+  vault: Vault!
+  nav: BigInt!
+  sharePrice: BigInt!
+  timestamp: Int!
+  block: Int!
+}
+
+type Adapter {
+  id: ID! # adapter address
+  kind: AdapterKind!
+  vault: Vault
+  perplAccountId: BigInt
+  perplMarginIn: BigInt!
+  perplMarginOut: BigInt!
+  perplOrderCount: Int!
+  kuruBaseHeld: BigInt! # native MON wei bought minus sold
+  kuruQuoteIn: BigInt!
+  kuruQuoteOut: BigInt!
+  fills: [VenueAction!]! @derivedFrom(field: "adapter")
+}
+
+# One per adapter event: Perpl OrderSent/Margin*/Recalled, Kuru Bought/Sold/Unwound.
+type VenueAction {
+  id: ID!
+  adapter: Adapter!
+  vault: String!
+  kind: String!
+  perpId: BigInt
+  orderType: Int
+  orderId: BigInt
+  price: BigInt # Perpl pricePNS, or Kuru reference price (WAD)
+  size: BigInt # Perpl lotLNS, or Kuru base wei
+  quote: BigInt # asset units in or out (notional, margin, quote)
+  leverageHdths: BigInt
+  timestamp: Int!
+  txHash: String! @index
+}
+
+type Asset {
+  id: ID! # token address, allowlisted by the registry
+  allowedAt: Int!
+}

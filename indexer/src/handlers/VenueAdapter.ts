@@ -1,0 +1,147 @@
+import { indexer, type Adapter, type EvmOnEventContext as Ctx } from "envio";
+import { eventId } from "../lib.js";
+
+// PerplAdapter and KuruAdapter events. The kind is learned from the first kind-specific event.
+
+type E = {
+  chainId: number;
+  block: { number: number; timestamp: number };
+  logIndex: number;
+  srcAddress: string;
+  transaction: { hash: string };
+};
+
+type Action = {
+  vault: string;
+  kind: string;
+  perpId?: bigint;
+  orderType?: number;
+  orderId?: bigint;
+  price?: bigint;
+  size?: bigint;
+  quote?: bigint;
+  leverageHdths?: bigint;
+};
+
+async function adapter(context: Ctx, address: string): Promise<Adapter> {
+  return (
+    (await context.Adapter.get(address)) ?? {
+      id: address,
+      kind: "Unknown",
+      vault_id: undefined,
+      perplAccountId: undefined,
+      perplMarginIn: 0n,
+      perplMarginOut: 0n,
+      perplOrderCount: 0,
+      kuruBaseHeld: 0n,
+      kuruQuoteIn: 0n,
+      kuruQuoteOut: 0n,
+    }
+  );
+}
+
+function record(context: Ctx, e: E, a: Action) {
+  context.VenueAction.set({
+    id: eventId(e),
+    adapter_id: e.srcAddress,
+    vault: a.vault,
+    kind: a.kind,
+    perpId: a.perpId,
+    orderType: a.orderType,
+    orderId: a.orderId,
+    price: a.price,
+    size: a.size,
+    quote: a.quote,
+    leverageHdths: a.leverageHdths,
+    timestamp: e.block.timestamp,
+    txHash: e.transaction.hash,
+  });
+}
+
+indexer.onEvent({ contract: "VenueAdapter", event: "Bound" }, async ({ event, context }) => {
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({ ...a, vault_id: event.params.vault });
+});
+
+// ------------------------------------------------------------------ Perpl
+
+indexer.onEvent({ contract: "VenueAdapter", event: "PerpTracked" }, async ({ event, context }) => {
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({ ...a, kind: "Perpl" });
+});
+
+indexer.onEvent({ contract: "VenueAdapter", event: "MarginDeposited" }, async ({ event, context }) => {
+  const { vault, amountCNS, accountId } = event.params;
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({ ...a, kind: "Perpl", perplAccountId: accountId, perplMarginIn: a.perplMarginIn + amountCNS });
+  record(context, event, { vault, kind: "MarginDeposited", quote: amountCNS });
+});
+
+indexer.onEvent({ contract: "VenueAdapter", event: "MarginWithdrawn" }, async ({ event, context }) => {
+  const { vault, amountCNS } = event.params;
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({ ...a, kind: "Perpl", perplMarginOut: a.perplMarginOut + amountCNS });
+  record(context, event, { vault, kind: "MarginWithdrawn", quote: amountCNS });
+});
+
+indexer.onEvent({ contract: "VenueAdapter", event: "Recalled" }, async ({ event, context }) => {
+  const { vault, amountCNS } = event.params;
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({ ...a, kind: "Perpl", perplMarginOut: a.perplMarginOut + amountCNS });
+  record(context, event, { vault, kind: "Recalled", quote: amountCNS });
+});
+
+indexer.onEvent({ contract: "VenueAdapter", event: "OrderSent" }, async ({ event, context }) => {
+  const { vault, perpId, orderType, orderId, pricePNS, lotLNS, leverageHdths, notional } = event.params;
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({ ...a, kind: "Perpl", perplOrderCount: a.perplOrderCount + 1 });
+  record(context, event, {
+    vault,
+    kind: "OrderSent",
+    perpId,
+    orderType: Number(orderType),
+    orderId,
+    price: pricePNS,
+    size: lotLNS,
+    quote: notional,
+    leverageHdths,
+  });
+});
+
+// ------------------------------------------------------------------ Kuru
+
+indexer.onEvent({ contract: "VenueAdapter", event: "Bought" }, async ({ event, context }) => {
+  const { vault, quoteIn, baseOut, referencePrice } = event.params;
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({
+    ...a,
+    kind: "Kuru",
+    kuruBaseHeld: a.kuruBaseHeld + baseOut,
+    kuruQuoteIn: a.kuruQuoteIn + quoteIn,
+  });
+  record(context, event, { vault, kind: "Bought", price: referencePrice, size: baseOut, quote: quoteIn });
+});
+
+indexer.onEvent({ contract: "VenueAdapter", event: "Sold" }, async ({ event, context }) => {
+  const { vault, baseIn, quoteOut, referencePrice } = event.params;
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({
+    ...a,
+    kind: "Kuru",
+    kuruBaseHeld: a.kuruBaseHeld - baseIn,
+    kuruQuoteOut: a.kuruQuoteOut + quoteOut,
+  });
+  record(context, event, { vault, kind: "Sold", price: referencePrice, size: baseIn, quote: quoteOut });
+});
+
+indexer.onEvent({ contract: "VenueAdapter", event: "Unwound" }, async ({ event, context }) => {
+  const { vault, baseIn, quoteOut } = event.params;
+  const a = await adapter(context, event.srcAddress);
+  context.Adapter.set({
+    ...a,
+    kind: "Kuru",
+    kuruBaseHeld: a.kuruBaseHeld - baseIn,
+    kuruQuoteOut: a.kuruQuoteOut + quoteOut,
+  });
+  record(context, event, { vault, kind: "Unwound", size: baseIn, quote: quoteOut });
+});
