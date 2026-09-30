@@ -131,8 +131,9 @@ export default function BackPanel(props: BackPanelProps) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ address, agentId: props.agentId }),
       });
-      const body = (await res.json()) as { error?: string; monTx?: Hash | null; ausdTx?: Hash | null };
+      const body = (await res.json()) as { error?: string; notice?: string; monTx?: Hash | null; ausdTx?: Hash | null };
       if (!res.ok) throw new Error(body.error ?? "Test funds failed.");
+      if (body.notice) setError(body.notice);
       const got: Receipt[] = [];
       if (body.ausdTx) got.push({ label: "Test AUSD", hash: body.ausdTx, ok: true });
       if (body.monTx) got.push({ label: "Test MON for gas", hash: body.monTx, ok: true });

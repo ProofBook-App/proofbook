@@ -43,6 +43,10 @@ export function ausdFaucet(chainId: number) {
   return CHAINS[chainId]?.ausdFaucet;
 }
 
+export function ausdAddress(chainId: number) {
+  return Object.entries(CHAINS[chainId]?.assets ?? {}).find(([, symbol]) => symbol === "AUSD")?.[0];
+}
+
 export function chainName(chainId: number) {
   return CHAINS[chainId]?.name ?? `Chain ${chainId}`;
 }

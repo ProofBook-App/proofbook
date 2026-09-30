@@ -1,4 +1,5 @@
 import { createRequestHandler } from "react-router";
+import { restockDrip } from "../app/lib/drip.server";
 import { syncSnapshot } from "../app/lib/snapshot.server";
 
 declare module "react-router" {
@@ -23,8 +24,10 @@ export default {
     return requestHandler(request, { cloudflare: { env, ctx } });
   },
 
-  // Every minute: copy the Envio indexer into the D1 snapshot the leaderboard reads.
+  // Every minute: copy the Envio indexer into the D1 snapshot the leaderboard reads, and on testnet
+  // keep the test-funds wallet stocked with AUSD for when Agora's faucet is busy.
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(syncSnapshot(env).then((r) => console.log("snapshot", JSON.stringify(r))));
+    ctx.waitUntil(restockDrip(env).then((r) => r && console.log("drip stock", JSON.stringify(r)), (e) => console.error("drip restock", e)));
   },
 } satisfies ExportedHandler<Env>;
