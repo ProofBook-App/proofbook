@@ -22,7 +22,8 @@ describe("house agent #1 on Monad testnet", () => {
     t.expect(await indexer.Asset.get(AUSD)).toBeDefined();
     t.expect((await indexer.Adapter.getOrThrow(ADAPTER)).vault_id).toBe(VAULT);
 
-    await indexer.process({ chains: { 10143: { startBlock: FIRST_TRADE[0], endBlock: FIRST_TRADE[1] } } });
+    // One range through the first MON mark: the test indexer rejects a range starting past PerplExchange's start_block.
+    await indexer.process({ chains: { 10143: { startBlock: FIRST_TRADE[0], endBlock: FIRST_MON_MARK } } });
 
     const vault = await indexer.Vault.getOrThrow(VAULT);
     t.expect(vault.deposited).toBe(400_000_000n);
@@ -54,11 +55,7 @@ describe("house agent #1 on Monad testnet", () => {
 
     const pos = await indexer.PerplPosition.getOrThrow("740-64");
     t.expect(pos).toMatchObject({ side: "Long", lot: 1_828n, entryPrice: 2_736n, deposit: 50_087_200n, leverageHdths: 100n });
-    t.expect(pos.unrealisedPnl).toBeUndefined(); // no mark seen yet
-
-    await indexer.process({ chains: { 10143: { startBlock: FIRST_TRADE[1] + 1, endBlock: FIRST_MON_MARK } } });
-    const marked = await indexer.PerplPosition.getOrThrow("740-64");
-    t.expect(marked.notional).toBe(49_904_400n); // 2730 x 1828 x 10
-    t.expect(marked.unrealisedPnl).toBe(-109_680n);
+    t.expect(pos.notional).toBe(49_904_400n); // at the next MON mark, 2730: 2730 x 1828 x 10
+    t.expect(pos.unrealisedPnl).toBe(-109_680n);
   });
 });

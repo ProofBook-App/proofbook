@@ -79,3 +79,6 @@ chains:
       - name: PerplExchange
         address:
           - 0x1964C32f0bE608E7D29302AFF5E61268E72080cc
+        # First MarginDeposited by one of our adapters (house agent #1's createAccount, tx 0x59c5…ea92).
+        # Nothing earlier can belong to our accounts. A later adapter's account opens after this anyway.
+        start_block: 66916943
