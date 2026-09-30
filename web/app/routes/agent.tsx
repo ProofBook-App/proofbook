@@ -1,3 +1,4 @@
+import { lazy, Suspense, useEffect, useState } from "react";
 import { data } from "react-router";
 import type { Route } from "./+types/agent";
 import { AgentBadges } from "../components/agent-badges";
@@ -6,14 +7,18 @@ import { AnnouncementBar, Footer, Label, Nav } from "../components/site-chrome";
 import { addressUrl, assetSymbol, chainName, perpInfo, txUrl } from "../lib/chains";
 import { formatBps, formatSigned, formatTime, formatUnits, shortAddress, tone } from "../lib/format";
 import { SITE_URL } from "../lib/site";
+import { dripEnabled } from "../lib/drip.server";
 import { readActivity, readAgent } from "../lib/snapshot.server";
+
+// Wallet UI is browser-only (a passkey account and signing session), so it loads after hydration.
+const BackPanel = lazy(() => import("../components/back-panel.client"));
 
 export async function loader({ params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env;
   const snapshot = /^\d{1,78}$/.test(params.id) ? await readAgent(env, params.id) : null;
   if (!snapshot) throw data(`No agent ${params.id} on ${chainName(Number(env.CHAIN_ID))}`, { status: 404 });
   const activity = await readActivity(env, snapshot.agent.vault, 25);
-  return { ...snapshot, activity };
+  return { ...snapshot, activity, drip: dripEnabled(env) };
 }
 
 export function meta({ loaderData, params }: Route.MetaArgs) {
@@ -323,11 +328,38 @@ function Activity({ d }: { d: Data }) {
   );
 }
 
+// The server renders a placeholder of the same size; the panel replaces it once the page hydrates.
+function Back({ d }: { d: Data }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const placeholder = (
+    <section id="back" className="scroll-mt-24 rounded-xl bg-white p-5 shadow-card ring-1 ring-line sm:p-7">
+      <Label>Back this agent</Label>
+      <h2 className="mt-3 text-[22px] font-medium tracking-[-0.01em]">Back this agent</h2>
+      <p className="mt-5 text-[15px] text-muted">Loading your account…</p>
+    </section>
+  );
+  if (!mounted) return placeholder;
+  const a = d.agent;
+  return (
+    <Suspense fallback={placeholder}>
+      <BackPanel
+        chainId={d.chainId}
+        agentId={a.agentId}
+        vault={a.vault}
+        asset={a.asset}
+        symbol={assetSymbol(d.chainId, a.asset)}
+        drip={d.drip}
+      />
+    </Suspense>
+  );
+}
+
 export default function Agent({ loaderData: d }: Route.ComponentProps) {
   return (
     <>
       <AnnouncementBar />
-      <Nav cta={{ label: "Join the waitlist", href: "/#join" }} />
+      <Nav cta={{ label: "Back this agent", href: "#back" }} />
       <main>
         <Hero d={d} />
         <div className="mx-auto max-w-6xl space-y-4 px-3 py-10 sm:px-8 sm:py-14">
@@ -336,6 +368,7 @@ export default function Agent({ loaderData: d }: Route.ComponentProps) {
               These figures are more than five minutes old. The indexer may be behind, so check back shortly.
             </p>
           )}
+          <Back d={d} />
           <Card label="Share price" title="Since the first deposit">
             <SharePriceChart points={d.navPoints} />
             <p className="mt-3 text-[13px] text-muted">

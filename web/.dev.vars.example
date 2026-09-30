@@ -1,0 +1,3 @@
+# Copy to .dev.vars for `pnpm dev`. In production: npx wrangler secret put DRIP_PK
+# Testnet-only drip wallet (app/lib/drip.server.ts). Leave unset to turn the drip off.
+DRIP_PK=

@@ -3,11 +3,19 @@
 type Perp = { name: string; priceDecimals: number; lotDecimals: number };
 const CHAINS: Record<
   number,
-  { name: string; explorer: string; assets: Record<string, string>; perps: Record<string, Perp> }
+  {
+    name: string;
+    explorer: string;
+    rpc: string;
+    assets: Record<string, string>;
+    perps: Record<string, Perp>;
+    ausdFaucet?: string;
+  }
 > = {
   143: {
     name: "Monad",
     explorer: "https://monadvision.com",
+    rpc: "https://rpc.monad.xyz",
     assets: { "0x00000000efe302beaa2b3e6e1b18d08d69a9012a": "AUSD" },
     perps: {
       "1": { name: "BTC", priceDecimals: 1, lotDecimals: 5 },
@@ -19,10 +27,21 @@ const CHAINS: Record<
   10143: {
     name: "Monad testnet",
     explorer: "https://testnet.monadvision.com",
+    rpc: "https://testnet-rpc.monad.xyz",
+    // Agora's testnet AUSD faucet: requestFunds(recipient), 10,000 AUSD (docs/reference/perpl.md).
+    ausdFaucet: "0xd236c18d274e54faccc3dd9dda4b27965a73ee6c",
     assets: { "0xa9012a055bd4e0edff8ce09f960291c09d5322dc": "AUSD" },
     perps: { "64": { name: "MON", priceDecimals: 5, lotDecimals: 0 } },
   },
 };
+
+export function rpcUrl(chainId: number) {
+  return CHAINS[chainId]?.rpc ?? "https://rpc.monad.xyz";
+}
+
+export function ausdFaucet(chainId: number) {
+  return CHAINS[chainId]?.ausdFaucet;
+}
 
 export function chainName(chainId: number) {
   return CHAINS[chainId]?.name ?? `Chain ${chainId}`;

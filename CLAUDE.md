@@ -41,6 +41,7 @@ cd indexer && pnpm test                                 # replays house agent #1
 cd indexer && pnpm abis                                 # after changing contract events: forge build, then this, then codegen
 cd web && pnpm dev                                      # /api/leaderboard, /api/agent/:id; first request fills local D1 from the indexer
 cd web && npx wrangler d1 migrations apply proofbook --local   # after adding web/migrations/*.sql (--remote for production)
+cd web && FLOW_TEST_KEY_FILE=... npx tsx scripts/flow-test.ts  # testnet deposit/withdraw through the backer session code (throwaway key, ~0.3 MON)
 ```
 
 ## Invariants (spec §6): never violate, tests first

@@ -68,6 +68,15 @@ https://proofbook.app/leaderboard and every agent profile (`/agent/:id`, e.g. ht
 
 Amounts are decimal strings of base units (AUSD: 6 decimals; share prices: 1e18 = 1.0). When the indexer is redeployed, update `ENVIO_GRAPHQL_URL` in `web/wrangler.jsonc`.
 
+### Backing an agent (deposit and withdraw)
+
+The "Back this agent" panel on every `/agent/:id` page runs in the browser only (`web/app/lib/backer.client.ts`, `web/app/components/back-panel.client.tsx`).
+
+- **Account:** a [Mera](https://mera.category.xyz) passkey. The key is derived from the passkey's PRF output (BIP-39 entropy, path `m/44'/60'/0'/0/0`). Only the credential id and the address are stored on the device, so a cleared browser or a new device gets the same account back from the passkey. No seed phrase, extension or custody server.
+- **Session:** one passkey prompt creates or unlocks the account and starts a 15-minute signing session. Inside it, approve, deposit and withdraw sign with no prompts. Our page code limits the session to this vault's asset `approve` (exact amount, never unlimited), `deposit` to self, `withdraw`/`redeem` of own shares to self, and the testnet AUSD faucet, all with zero native value. Every call is simulated before it is signed. These limits live in page JavaScript: they stop the app signing the wrong thing, not a script already running on the page. The vault's onchain rules (deposit cap, withdrawals always open when idle) apply regardless.
+- **Test funds (testnet only):** `POST /api/drip` sends a new account 0.5 test MON for gas and asks Agora's faucet for 10,000 test AUSD (`web/app/lib/drip.server.ts`). One per account per day, five per IP. It is off unless the `DRIP_PK` secret is set, and it refuses on any chain but 10143.
+- **Check it:** `cd web && FLOW_TEST_KEY_FILE=<file holding a throwaway testnet key with ~0.3 MON> npx tsx scripts/flow-test.ts` runs faucet, approve, deposit, withdraw and redeem through the same session code against house agent #1's vault, and checks that out-of-scope calls are refused. First run 2026-09-30: approve, deposit 25 AUSD, withdraw 5 (`0x4b2a844e94fa623fa0520a37f9f3087e670363e964e5d1addaf7c9f02ccb996b`), redeem the rest (`0x364cefb00ce12ed7779f4e5c339cb2aad32e4760b99100af816ef26a9082c575`). Five transactions cost about 0.15 test MON.
+
 ### Testnet simulation stack (10143, retired 2026-09-30)
 
 > **Not used any more.** Testnet runs on the real Perpl testnet through registry `0x25D4…8ABC` and house agent #1 (above). Kuru is not tested on testnet (Kuru v1 has no testnet market); it is covered by the mainnet-fork suite. The sim contracts stay in `src/sim/` because the CI tests use them. The sim Kuru book's 9 MON was withdrawn back to the deployer (`0x172c3829574e382832f10e48518aa15a9d56b7486bcfb1b3f800f12c09018537`). The history below is kept for the record.

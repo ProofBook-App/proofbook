@@ -50,7 +50,8 @@ A Mera "signing session" is **only** "a private key in memory until `end()`". **
 
 - The spike wraps the session in a bounded session: a 5-minute TTL (auto `end()`), messages must start with an app prefix, and txs are limited to chain 10143, `to == self` and `value == 0`. The scope checks are in **page JS**. They stop honest-app mistakes, not an attacker who already runs code on the page.
 - Once the session is live, signing is prompt-free. Only starting it costs a prompt.
-- **Proofbook design suggestion** (not built): scope a backer session to `{AUSD.approve(vault, ≤cap), vault.deposit(≤cap), vault.redeem/withdraw(own shares)}` on chain 143, with the TTL shown in the UI. For onchain enforcement we'd need EIP-7702 delegation to a session-key contract (`toViemAccount` supports `signAuthorization`). On Monad, 7702-delegated EOAs must keep 10 MON and cannot CREATE (see `monad.md`). That's out of scope unless it's cheap.
+- **Built 2026-09-30** (`web/app/lib/backer.client.ts`): login and session start share one ceremony, TTL 15 minutes, scope as below minus the chain-143 part (the page's `CHAIN_ID`), plus the testnet AUSD faucet. Approvals are for the exact amount. rpId is `proofbook.app` on every proofbook.app host, otherwise the hostname.
+- **Original design suggestion:** scope a backer session to `{AUSD.approve(vault, ≤cap), vault.deposit(≤cap), vault.redeem/withdraw(own shares)}` on chain 143, with the TTL shown in the UI. For onchain enforcement we'd need EIP-7702 delegation to a session-key contract (`toViemAccount` supports `signAuthorization`). On Monad, 7702-delegated EOAs must keep 10 MON and cannot CREATE (see `monad.md`). That's out of scope unless it's cheap.
 
 ### (c) Stateless test: yes by construction [F code, U live]
 
