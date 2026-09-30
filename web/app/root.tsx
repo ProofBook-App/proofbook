@@ -9,6 +9,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { Reveal } from "./components/reveal";
 import { REPO_URL, SITE_URL } from "./lib/site";
 
 export const links: Route.LinksFunction = () => [
@@ -43,6 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <Reveal />
         <ScrollRestoration />
         <Scripts />
       </body>

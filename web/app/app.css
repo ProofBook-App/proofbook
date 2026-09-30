@@ -55,3 +55,94 @@
     @apply outline-2 outline-offset-3 outline-dot;
   }
 }
+
+/* Motion. One load sequence in each hero, then sections ease in once as they
+   scroll into view. Everything sits behind prefers-reduced-motion, and hidden
+   states apply only once app/components/reveal.tsx has run and set data-motion
+   on <html>, so a page whose script fails still shows everything. It sets
+   data-in on each [data-reveal] element as it enters the viewport. */
+@theme {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@utility animate-rise {
+  animation: rise 0.9s var(--ease-out-soft) both;
+}
+
+@utility animate-wipe {
+  animation: wipe 1.8s var(--ease-out-soft) both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  html[data-motion] [data-reveal] {
+    transition:
+      opacity 0.8s var(--ease-out-soft),
+      transform 0.8s var(--ease-out-soft);
+  }
+  html[data-motion] [data-reveal]:not([data-in]) {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  /* Lists: the children follow each other in instead of the list moving as one. */
+  html[data-motion] [data-reveal="stagger"],
+  html[data-motion] [data-reveal="stagger"]:not([data-in]) {
+    opacity: 1;
+    transform: none;
+  }
+  html[data-motion] [data-reveal="stagger"] > * {
+    transition:
+      opacity 0.7s var(--ease-out-soft),
+      transform 0.7s var(--ease-out-soft);
+  }
+  html[data-motion] [data-reveal="stagger"]:not([data-in]) > * {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  html[data-motion] [data-reveal="stagger"] > :nth-child(2) { transition-delay: 70ms; }
+  html[data-motion] [data-reveal="stagger"] > :nth-child(3) { transition-delay: 140ms; }
+  html[data-motion] [data-reveal="stagger"] > :nth-child(4) { transition-delay: 210ms; }
+  html[data-motion] [data-reveal="stagger"] > :nth-child(5) { transition-delay: 280ms; }
+  html[data-motion] [data-reveal="stagger"] > :nth-child(n + 6) { transition-delay: 350ms; }
+
+  /* Halftone charts draw left to right, like a price line. */
+  html[data-motion] [data-reveal="wipe"],
+  html[data-motion] [data-reveal="wipe"]:not([data-in]) {
+    opacity: 1;
+    transform: none;
+    transition: clip-path 1.8s var(--ease-out-soft);
+  }
+  html[data-motion] [data-reveal="wipe"]:not([data-in]) {
+    clip-path: inset(0 100% 0 0);
+  }
+  html[data-motion] [data-reveal="wipe"][data-in] {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-wipe {
+    animation: none;
+  }
+}

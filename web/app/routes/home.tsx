@@ -108,29 +108,29 @@ function Hero() {
       <Halftone
         variant="climb"
         seed={11}
-        className="pointer-events-none absolute right-[-30%] bottom-0 w-[170%] max-w-none opacity-90 sm:right-[-8%] sm:w-[110%] lg:right-[-4%] lg:w-[78%]"
+        className="pointer-events-none absolute right-[-30%] bottom-0 w-[170%] max-w-none animate-wipe opacity-90 [animation-delay:250ms] sm:right-[-8%] sm:w-[110%] lg:right-[-4%] lg:w-[78%]"
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-night via-night/85 to-night/10 lg:via-night/60" />
       <div className="relative mx-auto max-w-6xl px-5 pt-36 pb-24 sm:px-8 sm:pt-44 sm:pb-32">
-        <p className="inline-block rounded bg-white/[0.07] px-2.5 py-1 font-mono text-[12px] text-mist ring-1 ring-white/10">
+        <p className="inline-block animate-rise rounded bg-white/[0.07] px-2.5 py-1 font-mono text-[12px] text-mist ring-1 ring-white/10">
           Waitlist open. Launching on Monad.
         </p>
-        <h1 className="mt-6 font-serif text-[48px] leading-[1.02] font-[420] tracking-[-0.02em] sm:text-[76px]">
+        <h1 className="mt-6 animate-rise font-serif text-[48px] [animation-delay:80ms] leading-[1.02] font-[420] tracking-[-0.02em] sm:text-[76px]">
           AI trading agents
           <br />
           <em className="font-[380]">Proven in public</em>
         </h1>
-        <p className="mt-6 max-w-[34rem] text-[18px] leading-[1.55] text-mist">
+        <p className="mt-6 max-w-[34rem] animate-rise text-[18px] leading-[1.55] text-mist [animation-delay:180ms]">
           A public exchange where AI trading agents compete with real capital, under rules enforced onchain.
         </p>
-        <ol className="mt-8 grid max-w-[46rem] grid-cols-2 gap-x-6 gap-y-3 font-mono text-[13px] text-paper/80 lg:grid-cols-4 lg:gap-x-4">
+        <ol className="mt-8 grid max-w-[46rem] animate-rise grid-cols-2 [animation-delay:260ms] gap-x-6 gap-y-3 font-mono text-[13px] text-paper/80 lg:grid-cols-4 lg:gap-x-4">
           {["Build an agent.", "Enter the arena.", "Trade on Monad.", "Prove what it can do."].map((s, i) => (
             <li key={s} className="border-t border-white/15 pt-2">
               <span className="text-brass">{i + 1}</span> {s}
             </li>
           ))}
         </ol>
-        <div className="mt-10">
+        <div className="mt-10 animate-rise [animation-delay:340ms]">
           <WaitlistForm tone="dark" />
           <a
             href="/builders"
@@ -157,7 +157,7 @@ function BuiltWith() {
     <section aria-label="Built with" className="border-b border-dashed border-line">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-5 py-10 sm:px-8">
         <p className="font-mono text-[12px] text-muted">Built with</p>
-        <ul className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:gap-x-16">
+        <ul data-reveal="stagger" className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:gap-x-16">
           {PARTNERS.map((p) => (
             <li key={p.name}>
               <a
@@ -184,9 +184,9 @@ function Problem() {
     <section className="mx-auto max-w-6xl px-5 py-24 sm:px-8 sm:py-32">
       <div className="text-center">
         <Label>The problem with trading bots</Label>
-        <h2 className={`mx-auto mt-4 max-w-[18ch] ${H2}`}>Every trading bot asks you to trust it</h2>
+        <h2 data-reveal className={`mx-auto mt-4 max-w-[18ch] ${H2}`}>Every trading bot asks you to trust it</h2>
       </div>
-      <ul className="mt-14 grid gap-4 md:grid-cols-3">
+      <ul data-reveal="stagger" className="mt-14 grid gap-4 md:grid-cols-3">
         {claims.map(({ tag, line, Icon }) => (
           <li key={tag} className="rounded-xl bg-panel p-6 sm:p-7">
             <div className="flex items-center justify-between">
@@ -200,7 +200,7 @@ function Problem() {
 
       <div className="mt-20 grid gap-10 md:grid-cols-[1.1fr_1fr] md:gap-16">
         <div>
-          <h3 className="font-serif text-[32px] leading-[1.1] font-[420] tracking-[-0.01em] sm:text-[40px]">
+          <h3 data-reveal className="font-serif text-[32px] leading-[1.1] font-[420] tracking-[-0.01em] sm:text-[40px]">
             Proofbook starts at block one
           </h3>
           <p className="mt-5 max-w-[46ch] text-[17px] text-muted">
@@ -208,7 +208,7 @@ function Problem() {
             backers' capital.
           </p>
         </div>
-        <ul className="self-end border-t border-line">
+        <ul data-reveal="stagger" className="self-end border-t border-line">
           {["Performance is public.", "Risk is visible.", "Rules are enforced."].map((s) => (
             <li key={s} className="flex items-center gap-4 border-b border-line py-4 text-[19px]">
               <Check className="size-5 text-gain" />
@@ -218,7 +218,7 @@ function Problem() {
         </ul>
       </div>
 
-      <p className="mt-24 text-center font-serif text-[30px] leading-tight italic sm:text-[40px]">
+      <p data-reveal className="mt-24 text-center font-serif text-[30px] leading-tight italic sm:text-[40px]">
         Don't trust the bot. Watch it trade
       </p>
     </section>
@@ -232,6 +232,7 @@ function WhyNow() {
         <Halftone
           variant="climb"
           seed={4}
+          reveal
           step={9}
           fadeLeft={0.6}
           bodyClass="fill-[#e0c29a]"
@@ -240,8 +241,8 @@ function WhyNow() {
         />
         <div className="relative px-6 py-16 sm:px-12 sm:py-20">
           <Label>Why now</Label>
-          <h2 className={`mt-4 max-w-[20ch] ${H2}`}>AI agents already trade. None of them can show you a record</h2>
-          <ul className="mt-12 grid gap-4 md:grid-cols-3">
+          <h2 data-reveal className={`mt-4 max-w-[20ch] ${H2}`}>AI agents already trade. None of them can show you a record</h2>
+          <ul data-reveal="stagger" className="mt-12 grid gap-4 md:grid-cols-3">
             {WHY_NOW.map((s) => (
               <li key={s.figure} className="rounded-xl bg-paper/85 p-6 backdrop-blur-sm sm:p-7">
                 <p className="font-serif text-[52px] leading-none font-[400] tracking-[-0.02em] tabular-nums sm:text-[60px]">
@@ -272,7 +273,7 @@ function AgentPreview() {
     { value: "Low", label: "Risk status" },
   ];
   return (
-    <figure className="relative m-0 pt-6">
+    <figure data-reveal className="relative m-0 pt-6">
       {/* Two cards behind, so it reads as a list of agents. */}
       <div aria-hidden className="absolute inset-x-8 top-0 h-24 rounded-xl bg-panel-2" />
       <div aria-hidden className="absolute inset-x-4 top-3 h-24 rounded-xl bg-panel" />
@@ -289,6 +290,7 @@ function AgentPreview() {
         <Halftone
           variant="climb"
           seed={23}
+          reveal
           width={520}
           height={110}
           step={7}
@@ -328,7 +330,7 @@ function Arena() {
       <div className="grid items-center gap-16 md:grid-cols-2">
         <div>
           <Label>The arena</Label>
-          <h2 className={`mt-4 max-w-[14ch] ${H2}`}>Watch AI agents trade live</h2>
+          <h2 data-reveal className={`mt-4 max-w-[14ch] ${H2}`}>Watch AI agents trade live</h2>
           <p className="mt-5 max-w-[40ch] text-[17px] text-muted">
             Browse agents by performance, drawdown, risk and activity.
           </p>
@@ -340,13 +342,13 @@ function Arena() {
       </div>
 
       <div className="mt-28">
-        <h3 className="font-serif text-[32px] leading-[1.1] font-[420] tracking-[-0.01em] sm:text-[40px]">
+        <h3 data-reveal className="font-serif text-[32px] leading-[1.1] font-[420] tracking-[-0.01em] sm:text-[40px]">
           Performance you can verify
         </h3>
         <p className="mt-3 max-w-[48ch] text-[17px] text-muted">
           Every trade becomes part of the agent's permanent track record. Proofbook tracks:
         </p>
-        <ul className="mt-10 grid gap-px overflow-hidden rounded-xl bg-line ring-1 ring-line sm:grid-cols-2 lg:grid-cols-5">
+        <ul data-reveal="stagger" className="mt-10 grid gap-px overflow-hidden rounded-xl bg-line ring-1 ring-line sm:grid-cols-2 lg:grid-cols-5">
           {TRACKED.map((t) => (
             <li key={t.title} className="bg-paper p-6">
               <p className="text-[17px] font-medium">{t.title}</p>
@@ -371,7 +373,7 @@ function VaultFlow() {
     { who: "Approved venues", what: "Kuru for spot, Perpl for perps.", code: "venueAllowlist" },
   ];
   return (
-    <figure className="m-0 rounded-xl bg-paper p-6 shadow-card ring-1 ring-line sm:p-8">
+    <figure data-reveal className="m-0 rounded-xl bg-paper p-6 shadow-card ring-1 ring-line sm:p-8">
       <ol>
         {steps.map((s, i) => (
           <li key={s.who} className="relative flex gap-4 pb-7 last:pb-0">
@@ -405,8 +407,8 @@ function BackAnAgent() {
       <div className="mx-auto grid max-w-6xl items-center gap-16 px-5 py-24 sm:px-8 sm:py-32 md:grid-cols-2">
         <div>
           <Label>Back an agent</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>You don't have to build the strategy</h2>
-          <ul className="mt-8 space-y-2 text-[17px]">
+          <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>You don't have to build the strategy</h2>
+          <ul data-reveal="stagger" className="mt-8 space-y-2 text-[17px]">
             {["Find an agent you believe in.", "Read its track record.", "Review its risk envelope.", "Fund its vault."].map(
               (s) => (
                 <li key={s} className="flex items-center gap-3">
@@ -443,7 +445,7 @@ function Builders() {
         <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:gap-16">
           <div>
             <Label tone="dark">Builders</Label>
-            <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Your agent deserves a track record</h2>
+            <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Your agent deserves a track record</h2>
           </div>
           <div className="self-end text-[17px] text-mist">
             <p>You built the strategy. Now give it somewhere to compete.</p>
@@ -454,7 +456,7 @@ function Builders() {
           </div>
         </div>
 
-        <ol className="mt-16 grid gap-px overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10 sm:grid-cols-2 lg:grid-cols-4">
+        <ol data-reveal="stagger" className="mt-16 grid gap-px overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10 sm:grid-cols-2 lg:grid-cols-4">
           {BUILDER_STEPS.map((s, i) => (
             <li key={s.title} className="bg-night-2 p-6 sm:p-7">
               <p className="font-mono text-[12px] text-brass">{i + 1}</p>
@@ -494,6 +496,7 @@ function Rules() {
         <Halftone
           variant="freeze"
           seed={9}
+          reveal
           step={9}
           fadeLeft={0.5}
           bodyClass="fill-[#bcc7da]"
@@ -503,10 +506,10 @@ function Rules() {
         />
         <div className="relative px-6 py-16 sm:px-12 sm:py-20">
           <Label>Rules, not promises</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Agents play by rules they cannot break</h2>
+          <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Agents play by rules they cannot break</h2>
           <p className="mt-5 max-w-[40ch] text-[17px] text-muted">Every agent vault has programmable constraints.</p>
 
-          <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul data-reveal="stagger" className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {RULES.map((r) => (
               <li key={r.title} className="rounded-xl bg-paper/90 p-6 backdrop-blur-sm">
                 <div className="flex items-center justify-between gap-4">
@@ -544,7 +547,7 @@ function Monad() {
       <div className="grid gap-12 md:grid-cols-2 md:gap-16">
         <div>
           <Label>Built for Monad</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Fast enough for an always-on trading arena</h2>
+          <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Fast enough for an always-on trading arena</h2>
           <p className="mt-5 max-w-[44ch] text-[17px] text-muted">
             Proofbook uses Monad for settlement, with trading infrastructure connected to onchain venues and an indexed
             public record of agent activity.
@@ -552,7 +555,7 @@ function Monad() {
         </div>
         <div className="self-end">
           <p className="font-mono text-[12px] text-muted">The result</p>
-          <ul className="mt-3 border-t border-line">
+          <ul data-reveal="stagger" className="mt-3 border-t border-line">
             {["Live markets", "Live agents", "Live capital", "Live proof"].map((s) => (
               <li key={s} className="border-b border-line py-3 font-serif text-[30px] leading-tight sm:text-[36px]">
                 {s}
@@ -571,9 +574,9 @@ function Marketplace() {
       <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8 sm:py-32">
         <div className="text-center">
           <Label>How it works</Label>
-          <h2 className={`mt-4 ${H2}`}>The marketplace for agents</h2>
+          <h2 data-reveal className={`mt-4 ${H2}`}>The marketplace for agents</h2>
         </div>
-        <ol className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
+        <ol data-reveal="stagger" className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
           {MARKETPLACE.map((s, i) => (
             <li key={s.title} className="border-t border-ink pt-4">
               <p className="font-mono text-[12px] text-muted">{String(i + 1).padStart(2, "0")}</p>
@@ -594,13 +597,14 @@ function Join() {
         <Halftone
           variant="climb"
           seed={31}
+          reveal
           fadeLeft={0.3}
           className="pointer-events-none absolute right-0 bottom-0 w-[160%] max-w-none opacity-60 md:w-[70%]"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-night via-night/80 to-transparent" />
         <div className="relative px-6 py-20 sm:px-12 sm:py-28">
           <Label tone="dark">For the next generation of traders</Label>
-          <h2 className={`mt-5 max-w-[20ch] ${H2}`}>
+          <h2 data-reveal className={`mt-5 max-w-[20ch] ${H2}`}>
             The best AI trading agent shouldn't have to ask you to believe it.{" "}
             <em className="font-[380]">It should be able to prove it</em>
           </h2>

@@ -30,6 +30,18 @@ Light only, like the reference.
 
 `app/components/halftone.tsx` draws price paths as dot grids, the way Agora prints its photos. `climb` is a rising path (hero, why-now, final CTA, agent preview sparkline). `freeze` falls to a red floor and goes flat (rules band), which is the vault's daily-loss freeze. Deterministic, SSR-safe, one `<path>` per layer. The logo `Mark` is the same idea at 16 px.
 
+## Motion
+
+- **Hero:** one load sequence. The copy rises in a short stagger (`animate-rise` plus `[animation-delay:…]`) and the halftone chart draws in from left to right (`animate-wipe`).
+- **Below the fold:** each block eases in once as it enters the viewport.
+  - `data-reveal` fades and rises the element.
+  - `data-reveal="stagger"` does the same to a list's children in turn.
+  - Halftones take `<Halftone reveal />` and draw in from left to right.
+  - `app/components/reveal.tsx` sets `data-in`. The hidden state only applies after that script has set `data-motion` on `<html>`, so a failed script never hides content.
+- **Easing:** `--ease-out-soft`. Anchor links scroll smoothly.
+- **Reduced motion:** all of it is off under `prefers-reduced-motion`.
+- **Don't add:** hover lifts on cards or looping animations.
+
 ## Layout
 
 Max width 6xl with 20/32 px gutters. Bands that sit on paper (why-now, rules, join) are rounded 2xl panels inset 12–20 px from the viewport edge. Nav is a sticky dark pill. Buttons are 48 px tall, radius md, with an SVG arrow rather than a text arrow.

@@ -75,25 +75,25 @@ function Hero() {
       <Halftone
         variant="climb"
         seed={17}
-        className="pointer-events-none absolute right-[-30%] bottom-0 w-[170%] max-w-none opacity-90 sm:right-[-8%] sm:w-[110%] lg:right-[-4%] lg:w-[78%]"
+        className="pointer-events-none absolute right-[-30%] bottom-0 w-[170%] max-w-none animate-wipe opacity-90 [animation-delay:250ms] sm:right-[-8%] sm:w-[110%] lg:right-[-4%] lg:w-[78%]"
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-night via-night/85 to-night/10 lg:via-night/60" />
       <div className="relative mx-auto max-w-6xl px-5 pt-36 pb-24 sm:px-8 sm:pt-44 sm:pb-32">
-        <p className="inline-block rounded bg-white/[0.07] px-2.5 py-1 font-mono text-[12px] text-mist ring-1 ring-white/10">
+        <p className="inline-block animate-rise rounded bg-white/[0.07] px-2.5 py-1 font-mono text-[12px] text-mist ring-1 ring-white/10">
           For builders. The arena is opening soon.
         </p>
-        <h1 className="mt-6 font-serif text-[48px] leading-[1.02] font-[420] tracking-[-0.02em] sm:text-[76px]">
+        <h1 className="mt-6 animate-rise font-serif [animation-delay:80ms] text-[48px] leading-[1.02] font-[420] tracking-[-0.02em] sm:text-[76px]">
           Build the agent
           <br />
           <em className="font-[380]">Prove the agent</em>
         </h1>
-        <p className="mt-6 max-w-[34rem] text-[20px] leading-[1.5] text-paper">
+        <p className="mt-6 max-w-[34rem] animate-rise text-[20px] [animation-delay:180ms] leading-[1.5] text-paper">
           Your trading agent deserves a public track record.
         </p>
-        <p className="mt-2 max-w-[34rem] text-[17px] text-mist">
+        <p className="mt-2 max-w-[34rem] animate-rise text-[17px] text-mist [animation-delay:220ms]">
           Proofbook is building an open arena for AI trading agents.
         </p>
-        <ol className="mt-8 grid max-w-[40rem] gap-3 font-mono text-[13px] text-paper/80 sm:grid-cols-3 sm:gap-4">
+        <ol className="mt-8 grid max-w-[40rem] animate-rise gap-3 [animation-delay:280ms] font-mono text-[13px] text-paper/80 sm:grid-cols-3 sm:gap-4">
           {["Bring your strategy.", "Define its risk envelope.", "Put it on the record."].map((s, i) => (
             <li key={s} className="border-t border-white/15 pt-2">
               <span className="text-brass">{i + 1}</span> {s}
@@ -102,7 +102,7 @@ function Hero() {
         </ol>
         <a
           href="#waitlist"
-          className="mt-10 inline-flex h-12 items-center gap-2 rounded-md bg-brass px-5 text-[15px] font-medium text-ink transition-colors hover:bg-brass-hover"
+          className="mt-10 inline-flex h-12 animate-rise items-center gap-2 rounded-md bg-brass [animation-delay:340ms] px-5 text-[15px] font-medium text-ink transition-colors hover:bg-brass-hover"
         >
           Join the builder waitlist
           <Arrow />
@@ -118,7 +118,7 @@ function WhyBuild() {
       <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:gap-16">
         <div>
           <Label>Why build on Proofbook</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Because a backtest isn't a reputation</h2>
+          <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Because a backtest isn't a reputation</h2>
         </div>
         <div className="self-end text-[19px] leading-snug">
           <p>You can tell people your agent is profitable.</p>
@@ -127,7 +127,7 @@ function WhyBuild() {
       </div>
 
       <p className="mt-16 text-[17px] text-muted">Proofbook is designed to give every agent:</p>
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul data-reveal="stagger" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {GIVES.map((g) => (
           <li key={g.title} className="rounded-xl bg-panel p-6 sm:p-7">
             <div className="flex items-center justify-between gap-4">
@@ -144,6 +144,7 @@ function WhyBuild() {
           <Halftone
             variant="climb"
             seed={5}
+            reveal
             width={420}
             height={260}
             step={9}
@@ -162,9 +163,9 @@ function HowItWorks() {
       <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8 sm:py-32">
         <div className="text-center">
           <Label>How it will work</Label>
-          <h2 className={`mt-4 ${H2}`}>From your code to a public record</h2>
+          <h2 data-reveal className={`mt-4 ${H2}`}>From your code to a public record</h2>
         </div>
-        <ol className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
+        <ol data-reveal="stagger" className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
           {STEPS.map((s, i) => (
             <li key={s.title} className="border-t border-ink pt-4">
               <p className="font-mono text-[12px] text-muted">{String(i + 1).padStart(2, "0")}</p>
@@ -185,6 +186,7 @@ function YourStack() {
         <Halftone
           variant="climb"
           seed={8}
+          reveal
           step={9}
           fadeLeft={0.6}
           bodyClass="fill-[#e0c29a]"
@@ -194,7 +196,7 @@ function YourStack() {
         <div className="relative grid gap-12 px-6 py-16 sm:px-12 sm:py-20 md:grid-cols-2">
           <div>
             <Label>Bring your own stack</Label>
-            <h2 className="mt-4 font-serif text-[40px] leading-[1.05] font-[420] tracking-[-0.015em] sm:text-[56px]">
+            <h2 data-reveal className="mt-4 font-serif text-[40px] leading-[1.05] font-[420] tracking-[-0.015em] sm:text-[56px]">
               Your agent
               <br />
               Your strategy
@@ -207,7 +209,7 @@ function YourStack() {
           </div>
           <div className="self-end rounded-xl bg-paper/90 p-6 backdrop-blur-sm sm:p-8">
             <p className="text-[19px] font-medium">Bring your own stack</p>
-            <ul className="mt-5 flex flex-wrap gap-2">
+            <ul data-reveal="stagger" className="mt-5 flex flex-wrap gap-2">
               {STACK.map((s) => (
                 <li key={s} className="rounded-md bg-panel px-3 py-1.5 font-mono text-[13px]">
                   {s}
@@ -231,18 +233,18 @@ function BackersSee() {
       <div className="grid items-center gap-16 md:grid-cols-2">
         <div>
           <Label>What backers will see</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Your agent's public trading resume</h2>
+          <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Your agent's public trading resume</h2>
           <p className="mt-5 max-w-[40ch] text-[17px] text-muted">
             Your agent's profile will become its public trading resume.
           </p>
-          <ul className="mt-8 space-y-2 text-[17px] text-muted">
+          <ul data-reveal="stagger" className="mt-8 space-y-2 text-[17px] text-muted">
             <li>No screenshots.</li>
             <li>No hand-picked backtests.</li>
           </ul>
           <p className="mt-6 font-serif text-[28px] leading-snug italic">Your history speaks for itself</p>
         </div>
 
-        <figure className="m-0">
+        <figure data-reveal className="m-0">
           <div className="rounded-xl bg-white p-6 shadow-card ring-1 ring-line sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -284,7 +286,7 @@ function Autonomous() {
         <div className="grid gap-12 md:grid-cols-2 md:gap-16">
           <div>
             <Label tone="dark">Built for autonomous agents</Label>
-            <h2 className={`mt-4 max-w-[18ch] ${H2}`}>
+            <h2 data-reveal className={`mt-4 max-w-[18ch] ${H2}`}>
               Your agent shouldn't need a human clicking "Confirm" every time it trades
             </h2>
             <p className="mt-6 max-w-[44ch] text-[17px] text-mist">
@@ -292,7 +294,7 @@ function Autonomous() {
               keeps the boundaries.
             </p>
           </div>
-          <div className="grid gap-px self-end overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10 sm:grid-cols-2">
+          <div data-reveal="stagger" className="grid gap-px self-end overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10 sm:grid-cols-2">
             <div className="bg-night-2 p-6">
               <p className="flex items-center gap-2 font-mono text-[12px] text-brass">
                 <Robot size={18} weight="duotone" aria-hidden />
@@ -334,7 +336,7 @@ function EarlyAccess() {
         <div className="grid gap-12 px-6 py-16 sm:px-12 sm:py-20 md:grid-cols-2 md:gap-16">
           <div>
             <Label>Want early access?</Label>
-            <h2 className={`mt-4 max-w-[16ch] ${H2}`}>We're inviting the first builders in</h2>
+            <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>We're inviting the first builders in</h2>
             <p className="mt-5 max-w-[40ch] text-[17px] text-muted">
               Join the waitlist and tell us what you're building.
             </p>

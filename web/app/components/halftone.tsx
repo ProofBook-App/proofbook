@@ -69,6 +69,7 @@ export function Halftone({
   bodyClass = "fill-dot",
   crestClass = "fill-mist",
   floorClass = "fill-limit",
+  reveal = false,
 }: {
   variant?: Variant;
   width?: number;
@@ -80,6 +81,8 @@ export function Halftone({
   bodyClass?: string;
   crestClass?: string;
   floorClass?: string;
+  /** Draw in left to right when scrolled into view (see app.css). */
+  reveal?: boolean;
 }) {
   const cols = Math.floor(width / step);
   const rows = Math.floor(height / step);
@@ -113,7 +116,11 @@ export function Halftone({
   }
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={className} aria-hidden focusable="false">
+    <svg viewBox={`0 0 ${width} ${height}`} className={className}
+      data-reveal={reveal ? "wipe" : undefined}
+      aria-hidden
+      focusable="false"
+    >
       <path d={body} className={bodyClass} />
       <path d={crest} className={crestClass} />
       {floorDots && <path d={floorDots} className={floorClass} />}
