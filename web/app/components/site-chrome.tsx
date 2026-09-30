@@ -43,13 +43,6 @@ export function AnnouncementBar() {
   );
 }
 
-const NAV = [
-  { label: "Arena", href: "/#arena" },
-  { label: "Back an agent", href: "/#back" },
-  { label: "Builders", href: "/builders" },
-  { label: "Rules", href: "/#rules" },
-];
-
 export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { cta?: { label: string; href: string } }) {
   return (
     <header className="sticky top-3 z-50 mt-3 -mb-[68px] px-3">
@@ -60,14 +53,10 @@ export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { c
         <a href="/" aria-label="Proofbook home" className="rounded-sm">
           <Wordmark />
         </a>
-        <div className="hidden items-center gap-7 text-[14px] text-mist md:flex">
-          {NAV.map((l) => (
-            <a key={l.href} href={l.href} className="transition-colors hover:text-paper">
-              {l.label}
-            </a>
-          ))}
-        </div>
         <div className="flex items-center gap-1">
+          <a href="/builders" className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
+            Builders
+          </a>
           <a href={REPO_URL} className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
             GitHub
           </a>
