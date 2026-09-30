@@ -2,6 +2,10 @@
 // mounts it after hydration. One passkey prompt creates or unlocks the account and starts a
 // 15-minute signing session scoped to this vault; inside it, approve, deposit and withdraw sign
 // without prompts. Nothing secret is stored on the device.
+//
+// The panel on the page shows the position. The flow itself runs in a modal that picks up wherever
+// the backer is: no account → create or log in; locked → unlock; empty on testnet → test funds
+// (requested without a tap); then the amount, then a receipt. Any "#back" link opens it.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseUnits, type Address, type Hash } from "viem";
@@ -31,7 +35,9 @@ export type BackPanelProps = {
   drip: boolean;
 };
 
+type Mode = "deposit" | "withdraw";
 type Receipt = { label: string; hash: Hash; ok: boolean };
+type Done = { mode: Mode; amount: bigint; hash: Hash };
 
 const btn =
   "inline-flex min-h-12 items-center justify-center gap-2 rounded-md px-5 text-[15px] font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50";
@@ -50,7 +56,11 @@ export default function BackPanel(props: BackPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [firstTx, setFirstTx] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<Mode>("deposit");
+  const [done, setDone] = useState<Done | null>(null);
   const started = useRef<{ at: number; taps: number } | null>(null);
+  const dripTried = useRef<Session | null>(null);
   const address = session?.address ?? identity?.address;
 
   const refresh = useCallback(async () => {
@@ -75,18 +85,52 @@ export default function BackPanel(props: BackPanelProps) {
   // Lock when the page goes away, so the key doesn't outlive the tab's view of it.
   useEffect(() => () => session?.end("You left the page"), [session]);
 
+  // "Back this agent" in the nav (and any other #back link) opens the flow instead of scrolling.
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      const a = (e.target as Element | null)?.closest?.('a[href="#back"]');
+      if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      openFlow("deposit");
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  });
+
+  const p = position;
+  const lowGas = p !== null && p.mon < 100_000_000_000_000_000n; // 0.1 MON: a deposit and a withdrawal (~0.04 each on testnet)
+  const needsFunds = p !== null && (lowGas || p.wallet === 0n);
+
+  // On testnet an empty account gets its test funds as soon as it's unlocked: no tap, one request
+  // per session. If that fails the modal shows a button to try again.
+  useEffect(() => {
+    if (session && needsFunds && props.drip && dripTried.current !== session && !busy) {
+      dripTried.current = session;
+      getTestFunds(false);
+    }
+  }, [session, needsFunds, props.drip, busy]);
+
   function tap() {
-    if (started.current) started.current.taps += 1;
+    started.current ??= { at: Date.now(), taps: 0 };
+    started.current.taps += 1;
   }
 
-  async function begin(mode: "create" | "login") {
-    started.current ??= { at: Date.now(), taps: 0 };
+  function openFlow(next: Mode) {
     tap();
+    setMode(next);
+    setDone(null);
+    setError(null);
+    setOpen(true);
+  }
+
+  async function begin(how: "create" | "login") {
+    tap();
+    setOpen(true);
     setError(null);
     setEnded(null);
-    setBusy(mode === "create" ? "Waiting for your passkey…" : "Waiting for your passkey…");
+    setBusy(how === "create" ? "Creating your account. Confirm with your passkey…" : "Waiting for your passkey…");
     try {
-      const s = await unlock(mode, scope, (reason) => {
+      const s = await unlock(how, scope, (reason) => {
         setSession(null);
         setEnded(reason);
       });
@@ -99,16 +143,18 @@ export default function BackPanel(props: BackPanelProps) {
     }
   }
 
-  async function run(steps: { label: string; send: () => Promise<Hash> }[]) {
+  async function run(action: Mode, amount: bigint, steps: { label: string; send: () => Promise<Hash> }[]) {
     tap();
     setError(null);
     try {
+      let last: Hash | undefined;
       for (const [i, step] of steps.entries()) {
         setBusy(steps.length > 1 ? `${step.label} (${i + 1} of ${steps.length})…` : `${step.label}…`);
-        const hash = await step.send();
-        setReceipts((r) => [{ label: step.label, hash, ok: true }, ...r].slice(0, 6));
+        last = await step.send();
+        setReceipts((r) => [{ label: step.label, hash: last!, ok: true }, ...r].slice(0, 6));
       }
-      if (!firstTx && started.current && steps.some((s) => s.label === "Deposit")) {
+      if (last) setDone({ mode: action, amount, hash: last });
+      if (!firstTx && started.current && action === "deposit") {
         const secs = Math.round((Date.now() - started.current.at) / 1000);
         setFirstTx(`First deposit: ${started.current.taps} taps, ${secs} s from the first tap.`);
       }
@@ -121,10 +167,10 @@ export default function BackPanel(props: BackPanelProps) {
     }
   }
 
-  async function getTestFunds() {
-    tap();
+  async function getTestFunds(byHand: boolean) {
+    if (byHand) tap();
     setError(null);
-    setBusy("Sending test MON and AUSD…");
+    setBusy(`Sending 10,000 test ${props.symbol} and 0.5 test MON for gas…`);
     try {
       const res = await fetch("/api/drip", {
         method: "POST",
@@ -135,19 +181,192 @@ export default function BackPanel(props: BackPanelProps) {
       if (!res.ok) throw new Error(body.error ?? "Test funds failed.");
       if (body.notice) setError(body.notice);
       const got: Receipt[] = [];
-      if (body.ausdTx) got.push({ label: "Test AUSD", hash: body.ausdTx, ok: true });
+      if (body.ausdTx) got.push({ label: `Test ${props.symbol}`, hash: body.ausdTx, ok: true });
       if (body.monTx) got.push({ label: "Test MON for gas", hash: body.monTx, ok: true });
       setReceipts((r) => [...got, ...r].slice(0, 6));
     } catch (e) {
       setError(explain(e));
     } finally {
       setBusy(null);
-      refresh();
+      await refresh();
     }
   }
 
   const d = decimals ?? 6;
   const sym = props.symbol;
+  const atVenue = p !== null && p.value > p.maxWithdraw ? p.value - p.maxWithdraw : 0n;
+
+  const flow = (
+    <Modal open={open} onClose={() => setOpen(false)}>
+      {(() => {
+        if (!address) {
+          return (
+            <Step title="Back this agent">
+              <p className="text-[15px] text-muted">
+                Your account is a passkey: Face ID, Touch ID or your phone. No seed phrase and no extension. One prompt
+                creates it and unlocks it for {SESSION_MINUTES} minutes.
+              </p>
+              <div className="mt-5 flex flex-col gap-2">
+                <button className={primary} disabled={!!busy} onClick={() => begin("create")}>
+                  Create an account
+                </button>
+                <button className={secondary} disabled={!!busy} onClick={() => begin("login")}>
+                  Log in with a passkey
+                </button>
+              </div>
+              <p className="mt-3 text-[13px] text-muted">
+                Made one before, here or on another device? Log in. The same passkey always gives the same account.
+              </p>
+            </Step>
+          );
+        }
+        if (!session) {
+          return (
+            <Step title="Unlock your account">
+              <p className="text-[15px] text-muted">
+                One passkey prompt unlocks <span className="font-mono text-ink">{shortAddress(address)}</span> for{" "}
+                {SESSION_MINUTES} minutes, for approve, deposit and withdraw on this vault only.
+              </p>
+              <button className={`${primary} mt-5 w-full`} disabled={!!busy} onClick={() => begin("login")}>
+                Unlock for {SESSION_MINUTES} minutes
+              </button>
+              {ended && <p className="mt-3 text-[13px] text-muted">Session over. {ended}.</p>}
+            </Step>
+          );
+        }
+        if (!p) {
+          return (
+            <Step title="Your account">
+              <p role="status" className="text-[15px] text-muted">
+                Reading your balances…
+              </p>
+            </Step>
+          );
+        }
+        if (done) {
+          const verb = done.mode === "deposit" ? "Deposited" : "Withdrew";
+          return (
+            <Step title={`${verb} ${formatUnits(done.amount, d)} ${sym}`}>
+              <p className="text-[15px] text-muted">
+                {done.mode === "deposit"
+                  ? `You now hold ${formatUnits(p.value, d)} ${sym} in this vault. It moves with the agent's trades, and you can withdraw any time the vault isn't mid-trade.`
+                  : `${formatUnits(p.wallet, d)} ${sym} is in your wallet. ${formatUnits(p.value, d)} ${sym} is still in this vault.`}
+              </p>
+              <a
+                href={txUrl(props.chainId, done.hash)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-block font-mono text-[13px] text-muted underline decoration-current/30 underline-offset-2 hover:text-ink"
+              >
+                {shortAddress(done.hash)} on the explorer
+              </a>
+              {firstTx && done.mode === "deposit" && <p className="mt-3 font-mono text-[12px] text-muted">{firstTx}</p>}
+              <div className="mt-5 flex flex-col gap-2">
+                <button className={primary} onClick={() => setOpen(false)}>
+                  Done
+                </button>
+                <button className={secondary} onClick={() => setDone(null)}>
+                  {done.mode === "deposit" ? "Deposit more" : "Withdraw more"}
+                </button>
+              </div>
+            </Step>
+          );
+        }
+        if (mode === "deposit" && needsFunds && props.drip) {
+          return (
+            <Step title="Test funds">
+              <p className="text-[15px] text-muted">
+                This is Monad testnet. New accounts start empty, so we send 10,000 test {sym} and 0.5 test MON for gas.
+                They have no value.
+              </p>
+              {!busy && (
+                <button className={`${secondary} mt-5 w-full`} onClick={() => getTestFunds(true)}>
+                  Get test funds
+                </button>
+              )}
+            </Step>
+          );
+        }
+        return (
+          <Step title={mode === "deposit" ? "Deposit" : "Withdraw"}>
+            <div role="tablist" className="mb-4 grid grid-cols-2 gap-1 rounded-md bg-panel p-1">
+              {(["deposit", "withdraw"] as const).map((m) => (
+                <button
+                  key={m}
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => setMode(m)}
+                  className={`min-h-10 rounded text-[14px] font-medium capitalize ${mode === m ? "bg-white text-ink shadow-card" : "text-muted hover:text-ink"}`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            <dl className="mb-4 grid grid-cols-2 gap-2">
+              <Stat label="In your wallet" value={formatUnits(p.wallet, d)} unit={sym} />
+              <Stat label="In this vault" value={formatUnits(p.value, d)} unit={sym} />
+            </dl>
+            {!props.drip && lowGas && (
+              <p className="mb-4 rounded-lg bg-panel p-4 text-[14px] text-muted">
+                Your account needs a little MON to pay gas. Send some to {shortAddress(address)}.
+              </p>
+            )}
+            {mode === "deposit" ? (
+              <AmountForm
+                key="deposit"
+                title="Deposit"
+                symbol={sym}
+                decimals={d}
+                max={p.wallet < p.maxDeposit ? p.wallet : p.maxDeposit}
+                disabled={!!busy || p.frozen || p.maxDeposit === 0n}
+                note={
+                  p.frozen
+                    ? "The vault is frozen, so it takes no deposits. Withdrawals still work."
+                    : `Cap per backer: ${formatUnits(p.cap, d)} ${sym}. You can add ${formatUnits(p.maxDeposit, d)} more.`
+                }
+                onSubmit={(amount) =>
+                  run("deposit", amount, [
+                    ...(p.allowance < amount ? [{ label: "Approve", send: () => session.approve(amount) }] : []),
+                    { label: "Deposit", send: () => session.deposit(amount) },
+                  ])
+                }
+              />
+            ) : (
+              <AmountForm
+                key="withdraw"
+                title="Withdraw"
+                symbol={sym}
+                decimals={d}
+                max={p.maxWithdraw}
+                disabled={!!busy || p.shares === 0n}
+                note={
+                  atVenue > 0n
+                    ? `${formatUnits(atVenue, d)} ${sym} of yours is at the venue right now. You can withdraw ${formatUnits(p.maxWithdraw, d)} now, and the rest once it's back in the vault.`
+                    : "A 10% fee on profit above the vault's high-water mark goes to the agent's builder. Nothing else."
+                }
+                onSubmit={(amount) =>
+                  run("withdraw", amount, [
+                    amount === p.maxWithdraw && p.maxWithdraw >= p.value
+                      ? { label: "Withdraw", send: () => session.redeemAll() }
+                      : { label: "Withdraw", send: () => session.withdraw(amount) },
+                  ])
+                }
+              />
+            )}
+          </Step>
+        );
+      })()}
+      <Status busy={busy} error={error} />
+      {session && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 border-t border-line pt-3">
+          <Countdown session={session} />
+          <button className={quiet} onClick={() => session.end()}>
+            Lock now
+          </button>
+        </div>
+      )}
+    </Modal>
+  );
 
   if (!address) {
     return (
@@ -167,15 +386,10 @@ export default function BackPanel(props: BackPanelProps) {
         <p className="mt-3 text-[13px] text-muted">
           Made one before, here or on another device? Log in. The same passkey always gives the same account.
         </p>
-        <Status busy={busy} error={error} />
+        {flow}
       </Shell>
     );
   }
-
-  const p = position;
-  const lowGas = p !== null && p.mon < 100_000_000_000_000_000n; // 0.1 MON: a deposit and a withdrawal (~0.04 each on testnet)
-  const needsFunds = p !== null && (lowGas || p.wallet === 0n);
-  const atVenue = p !== null && p.value > p.maxWithdraw ? p.value - p.maxWithdraw : 0n;
 
   return (
     <Shell title={p && p.shares > 0n ? "Your position" : "Back this agent"}>
@@ -192,11 +406,18 @@ export default function BackPanel(props: BackPanelProps) {
         <Stat label="Gas" value={p ? formatUnits(p.mon, 18, 3) : "…"} unit="MON" />
       </dl>
 
-      {!session ? (
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button className={primary} disabled={!!busy} onClick={() => begin("login")}>
-            Unlock for {SESSION_MINUTES} minutes
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <button className={primary} onClick={() => openFlow("deposit")}>
+          Deposit
+        </button>
+        <button className={secondary} disabled={!p || p.shares === 0n} onClick={() => openFlow("withdraw")}>
+          Withdraw
+        </button>
+        {session ? (
+          <button className={quiet} onClick={() => session.end()}>
+            Lock now
           </button>
+        ) : (
           <button
             className={quiet}
             onClick={() => {
@@ -207,83 +428,10 @@ export default function BackPanel(props: BackPanelProps) {
           >
             Forget this device
           </button>
-          {ended && <p className="text-[13px] text-muted">Session over. {ended}.</p>}
-        </div>
-      ) : (
-        <>
-          {needsFunds && props.drip && (
-            <div className="mt-5 rounded-lg bg-panel p-4">
-              <p className="text-[14px] text-muted">
-                This is Monad testnet. New accounts start empty, so get 10,000 test {sym} and 0.5 test MON for gas. They have
-                no value.
-              </p>
-              <button className={`${secondary} mt-3`} disabled={!!busy} onClick={getTestFunds}>
-                Get test funds
-              </button>
-            </div>
-          )}
-          {needsFunds && !props.drip && lowGas && (
-            <p className="mt-5 rounded-lg bg-panel p-4 text-[14px] text-muted">
-              Your account needs a little MON to pay gas. Send some to {shortAddress(address)}.
-            </p>
-          )}
+        )}
+      </div>
+      {!session && ended && <p className="mt-3 text-[13px] text-muted">Session over. {ended}.</p>}
 
-          {p && (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <AmountForm
-                title="Deposit"
-                symbol={sym}
-                decimals={d}
-                max={p.wallet < p.maxDeposit ? p.wallet : p.maxDeposit}
-                disabled={!!busy || p.frozen || p.maxDeposit === 0n}
-                note={
-                  p.frozen
-                    ? "The vault is frozen, so it takes no deposits. Withdrawals still work."
-                    : `Cap per backer: ${formatUnits(p.cap, d)} ${sym}. You can add ${formatUnits(p.maxDeposit, d)} more.`
-                }
-                onSubmit={(amount) =>
-                  run([
-                    ...(p.allowance < amount
-                      ? [{ label: "Approve", send: () => session.approve(amount) }]
-                      : []),
-                    { label: "Deposit", send: () => session.deposit(amount) },
-                  ])
-                }
-              />
-              <AmountForm
-                title="Withdraw"
-                symbol={sym}
-                decimals={d}
-                max={p.maxWithdraw}
-                disabled={!!busy || p.shares === 0n}
-                note={
-                  atVenue > 0n
-                    ? `${formatUnits(atVenue, d)} ${sym} of yours is at the venue right now. You can withdraw ${formatUnits(p.maxWithdraw, d)} now, and the rest once it's back in the vault.`
-                    : "A 10% fee on profit above the vault's high-water mark goes to the agent's builder. Nothing else."
-                }
-                onSubmit={(amount) =>
-                  run([
-                    amount === p.maxWithdraw && p.maxWithdraw >= p.value
-                      ? { label: "Withdraw", send: () => session.redeemAll() }
-                      : { label: "Withdraw", send: () => session.withdraw(amount) },
-                  ])
-                }
-              />
-            </div>
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center gap-x-4">
-            <button className={quiet} onClick={() => session.end()}>
-              Lock now
-            </button>
-            <p className="text-[13px] text-muted">
-              Unlocked for approve, deposit and withdraw on this vault only, to your own account.
-            </p>
-          </div>
-        </>
-      )}
-
-      <Status busy={busy} error={error} />
       {firstTx && <p className="mt-3 font-mono text-[12px] text-muted">{firstTx}</p>}
       {receipts.length > 0 && (
         <ul className="mt-4 space-y-1 border-t border-line pt-3">
@@ -297,7 +445,54 @@ export default function BackPanel(props: BackPanelProps) {
           ))}
         </ul>
       )}
+      {flow}
     </Shell>
+  );
+}
+
+// A native <dialog>: focus trap, Escape and the top layer come from the browser. A bottom sheet on
+// phones, a centred card from sm up. Clicking the backdrop closes it; work in flight carries on.
+function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (open && !el.open) el.showModal();
+    if (!open && el.open) el.close();
+  }, [open]);
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      aria-label="Back this agent"
+      className="m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-2xl bg-white p-0 text-ink shadow-card transition-[opacity,translate] duration-200 ease-(--ease-out-soft) backdrop:bg-night/50 starting:translate-y-6 starting:opacity-0 motion-reduce:transition-none sm:m-auto sm:max-w-md sm:rounded-2xl"
+    >
+      <div className="relative px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-7 sm:pt-6 sm:pb-7">
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-2 right-2 inline-flex size-11 items-center justify-center rounded-md text-[22px] leading-none text-muted hover:bg-panel hover:text-ink"
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </dialog>
+  );
+}
+
+function Step({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <>
+      <p className="font-mono text-[12px] tracking-tight text-muted">
+        <span className="text-dot">[</span> Back this agent <span className="text-dot">]</span>
+      </p>
+      <h2 className="mt-2 mb-4 pr-10 text-[22px] font-medium tracking-[-0.01em]">{title}</h2>
+      {children}
+    </>
   );
 }
 
@@ -373,15 +568,16 @@ function AmountForm(props: {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-lg ring-1 ring-line p-4" noValidate>
-      <label htmlFor={id} className="text-[14px] font-medium">
-        {props.title}
+    <form onSubmit={submit} noValidate>
+      <label htmlFor={id} className="sr-only">
+        {props.title} amount
       </label>
-      <div className="mt-2 flex items-center gap-2 rounded-md bg-paper px-3 ring-1 ring-line focus-within:ring-2 focus-within:ring-dot">
+      <div className="flex items-center gap-2 rounded-md bg-paper px-3 ring-1 ring-line focus-within:ring-2 focus-within:ring-dot">
         <input
           id={id}
           inputMode="decimal"
           autoComplete="off"
+          autoFocus
           placeholder="0.00"
           value={text}
           onChange={(e) => setText(e.target.value)}

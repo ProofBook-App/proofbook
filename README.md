@@ -72,6 +72,15 @@ Amounts are decimal strings of base units (AUSD: 6 decimals; share prices: 1e18 
 
 The "Back this agent" panel on every `/agent/:id` page runs in the browser only (`web/app/lib/backer.client.ts`, `web/app/components/back-panel.client.tsx`).
 
+- **Flow:** the panel shows the position. Deposit, withdraw and the nav's "Back this agent" open a modal (a native `<dialog>`: a bottom sheet on phones, a centred card from `sm` up). The modal picks up wherever the backer is:
+  1. no account: create one or log in;
+  2. locked: unlock;
+  3. empty on testnet: test funds, requested automatically;
+  4. the amount;
+  5. a receipt with the explorer link.
+
+  A new backer on testnet takes two taps, "Create an account" and "Deposit", plus typing the amount.
+
 - **Account:** a [Mera](https://mera.category.xyz) passkey. The key is derived from the passkey's PRF output (BIP-39 entropy, path `m/44'/60'/0'/0/0`). Only the credential id and the address are stored on the device, so a cleared browser or a new device gets the same account back from the passkey. No seed phrase, extension or custody server.
 - **Session:** one passkey prompt creates or unlocks the account and starts a 15-minute signing session. Inside it, approve, deposit and withdraw sign with no prompts. Our page code limits the session to this vault's asset `approve` (exact amount, never unlimited), `deposit` to self, `withdraw`/`redeem` of own shares to self, and the testnet AUSD faucet, all with zero native value. Every call is simulated before it is signed. These limits live in page JavaScript: they stop the app signing the wrong thing, not a script already running on the page. The vault's onchain rules (deposit cap, withdrawals always open when idle) apply regardless.
 - **Test funds (testnet only):** `POST /api/drip` sends a new account 0.5 test MON for gas and asks Agora's faucet for 10,000 test AUSD (`web/app/lib/drip.server.ts`). MON and AUSD are limited separately to one each per account per day, plus five requests per IP. Agora's faucet allows one claim a minute across everyone, so when it's busy the drip sends AUSD from its own stock instead. The per-minute cron keeps that stock at 30,000 AUSD. The drip is off unless the `DRIP_PK` secret is set, and it refuses on any chain but 10143.
