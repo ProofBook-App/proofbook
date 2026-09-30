@@ -80,6 +80,13 @@ Envio Cloud builds from the `envio` branch. Its settings are:
 - Config File: `config.yaml`
 - Git Release Branch: `envio`
 
+The indexer is `proofbook` in org `proofbook-app`, created with the `envio-cloud` CLI (`npx envio-cloud@1.0.0 login` signs in through the GitHub CLI). `ENVIO_API_TOKEN` is set as an Envio Cloud env var.
+
+```bash
+npx envio-cloud@1.0.0 indexer get proofbook proofbook-app       # deployments and status
+npx envio-cloud@1.0.0 indexer commits proofbook proofbook-app   # what Envio has seen on the branch
+```
+
 To deploy what's on main:
 
 ```bash
