@@ -253,14 +253,22 @@ function timeline(d: Data): Item[] | null {
   if (!d.activity) return null;
   const symbol = assetSymbol(d.chainId, d.agent.asset);
   const items: Item[] = [
-    ...d.activity.Trade.map((t) => ({
-      id: t.id,
-      timestamp: t.timestamp,
-      txHash: t.txHash,
-      title: "Trade",
-      detail: `${formatUnits(t.notional)} ${symbol} notional. NAV ${formatUnits(t.navBefore)} to ${formatUnits(t.navAfter)}.`,
-      amount: { value: t.venueDelta, signed: true },
-    })),
+    // Every vault execute. Only orders, buys and sells are trades; margin moves and cancels aren't.
+    ...d.activity.Trade.map((t) => {
+      const nav = `NAV ${formatUnits(t.navBefore)} to ${formatUnits(t.navAfter)}.`;
+      const moved = `${formatUnits(t.notional)} ${symbol}`;
+      const [title, detail] =
+        t.kind === "MarginIn"
+          ? ["Margin to Perpl", `${moved} moved to the vault's Perpl account. ${nav}`]
+          : t.kind === "MarginOut"
+            ? ["Margin back from Perpl", `${moved} returned to the vault. ${nav}`]
+            : t.kind === "Cancel"
+              ? ["Order cancelled", nav]
+              : t.kind === "Unknown"
+                ? ["Execute", `${moved} through adapter ${shortAddress(t.venue)}. ${nav}`]
+                : [t.kind === "Buy" ? "Bought" : t.kind === "Sell" ? "Sold" : "Trade", `${moved} notional. ${nav}`];
+      return { id: t.id, timestamp: t.timestamp, txHash: t.txHash, title, detail, amount: { value: t.venueDelta, signed: true } };
+    }),
     ...d.activity.Flow.map((f) => ({
       id: f.id,
       timestamp: f.timestamp,

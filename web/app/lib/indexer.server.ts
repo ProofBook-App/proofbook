@@ -160,6 +160,7 @@ export const SNAPSHOT_QUERY = /* GraphQL */ `
 export type IndexedActivity = {
   Trade: {
     id: string;
+    kind: "Order" | "Cancel" | "MarginIn" | "MarginOut" | "Buy" | "Sell" | "Unknown";
     venue: string;
     notional: string;
     venueDelta: string;
@@ -177,6 +178,7 @@ export const ACTIVITY_QUERY = /* GraphQL */ `
   query Activity($vault: String!, $limit: Int!) {
     Trade(where: { vault_id: { _eq: $vault } }, order_by: { block: desc }, limit: $limit) {
       id
+      kind
       venue
       notional
       venueDelta

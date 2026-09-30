@@ -1,7 +1,10 @@
-import { indexer, type Backer, type EvmOnEventContext as Ctx, type Vault } from "envio";
+import { indexer, type Backer, type EvmOnEventContext as Ctx, type Trade, type Vault } from "envio";
 import { eventId, reprice } from "../lib.js";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
+const CANCEL = 4; // PerplAdapter order type
+
+type ExecuteKind = Trade["kind"];
 
 type E = { chainId: number; block: { number: number; timestamp: number }; logIndex: number; srcAddress: string };
 
@@ -111,12 +114,41 @@ indexer.onEvent({ contract: "AgentVault", event: "FeeTaken" }, async ({ event, c
   save(context, event, { ...v, nav, feesPaid: v.feesPaid + assets, highWaterMark }, true);
 });
 
+// The adapter emits its action inside execute, so it sits just before Executed in the same tx.
+// Take the latest one from this venue below Executed's log index (a tx could hold several executes).
+async function executeKind(context: Ctx, txHash: string, venue: string, logIndex: number): Promise<ExecuteKind> {
+  const actions = await context.VenueAction.getWhere({ txHash: { _eq: txHash } });
+  const logOf = (id: string) => Number(id.slice(id.lastIndexOf("-") + 1));
+  const action = actions
+    .filter((a) => a.adapter_id.toLowerCase() === venue.toLowerCase() && logOf(a.id) < logIndex)
+    .sort((a, b) => logOf(b.id) - logOf(a.id))[0];
+  switch (action?.kind) {
+    case "OrderSent":
+      return action.orderType === CANCEL ? "Cancel" : "Order";
+    case "MarginDeposited":
+      return "MarginIn";
+    case "MarginWithdrawn":
+      return "MarginOut";
+    case "Bought":
+      return "Buy";
+    case "Sold":
+      return "Sell";
+    default:
+      return "Unknown";
+  }
+}
+
+const TRADES: ExecuteKind[] = ["Order", "Buy", "Sell"];
+
 indexer.onEvent({ contract: "AgentVault", event: "Executed" }, async ({ event, context }) => {
   const { venue, notional, venueDelta, navBefore, navAfter } = event.params;
   const v = await context.Vault.getOrThrow(event.srcAddress);
+  const kind = await executeKind(context, event.transaction.hash, venue, event.logIndex);
+  const trade = TRADES.includes(kind);
   context.Trade.set({
     id: eventId(event),
     vault_id: v.id,
+    kind,
     venue,
     notional,
     venueDelta,
@@ -129,7 +161,13 @@ indexer.onEvent({ contract: "AgentVault", event: "Executed" }, async ({ event, c
   save(
     context,
     event,
-    { ...v, nav: navAfter, tradeCount: v.tradeCount + 1, tradeVolume: v.tradeVolume + notional },
+    {
+      ...v,
+      nav: navAfter,
+      executeCount: v.executeCount + 1,
+      tradeCount: v.tradeCount + (trade ? 1 : 0),
+      tradeVolume: v.tradeVolume + (trade ? notional : 0n),
+    },
     true,
   );
 });

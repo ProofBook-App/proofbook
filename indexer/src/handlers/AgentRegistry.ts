@@ -69,6 +69,7 @@ indexer.onEvent({ contract: "AgentRegistry", event: "VaultLinked" }, async ({ ev
     dayStartNav: 0n,
     tradeCount: 0,
     tradeVolume: 0n,
+    executeCount: 0,
     breachCount: 0,
     freezeCount: 0,
     backerCount: 0,

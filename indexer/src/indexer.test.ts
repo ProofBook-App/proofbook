@@ -28,7 +28,16 @@ describe("house agent #1 on Monad testnet", () => {
     const vault = await indexer.Vault.getOrThrow(VAULT);
     t.expect(vault.deposited).toBe(400_000_000n);
     t.expect(vault.backerCount).toBe(1);
-    t.expect(vault.tradeCount).toBe(2); // margin deposit + order
+    // Two executes: 100 AUSD of margin onto Perpl (tx 0x59c5…ea92), then the MON long (tx 0x0c6a…0fdc).
+    // Only the order is a trade.
+    t.expect(vault.executeCount).toBe(2);
+    t.expect(vault.tradeCount).toBe(1);
+    t.expect(vault.tradeVolume).toBe(50_270_000n); // the order's notional, not the margin
+    const executes = (await indexer.Trade.getAll()).sort((a, b) => a.timestamp - b.timestamp);
+    t.expect(executes.map((e) => [e.kind, e.notional])).toEqual([
+      ["MarginIn", 100_000_000n],
+      ["Order", 50_270_000n],
+    ]);
     t.expect(vault.nav).toBe(399_909_625n); // Executed.navAfter of the order (tx 0x0c6a…0fdc)
     t.expect(vault.pnl).toBe(-90_375n);
     t.expect(vault.frozen).toBe(false);

@@ -199,6 +199,10 @@ const TERMS = [
   },
   { term: "Max drawdown", body: "The largest fall in share price from its previous high." },
   {
+    term: "Trades",
+    body: "Orders the agent sent on Perpl, and buys and sells on Kuru. Moving margin in or out of Perpl doesn't count.",
+  },
+  {
     term: "Limits",
     body: "Set in the vault when the agent entered. A trade over the per-trade cap reverts. A loss past the daily cap freezes the vault in the same transaction.",
   },

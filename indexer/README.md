@@ -26,7 +26,9 @@ The `AgentRegistered` event doesn't say which kind of adapter a venue is. So `Ve
   - `peakSharePrice` is the highest share price so far.
   - `maxDrawdownBps` is the largest drop from that peak.
 - **`pnl`:** `nav + withdrawn + feesPaid - deposited`.
-- **Activity and policy:** `tradeCount`, `tradeVolume`, `breachCount`, `freezeCount`, `frozen`, and `backerCount` (holders with shares > 0).
+- **Activity and policy:** `tradeCount`, `tradeVolume`, `executeCount`, `breachCount`, `freezeCount`, `frozen`, and `backerCount` (holders with shares > 0).
+  - Every `execute` is a `Trade` row with a `kind`, taken from the adapter event just before `Executed` in the same tx: `Order`, `Cancel`, `MarginIn`, `MarginOut` (Perpl), `Buy`, `Sell` (Kuru), or `Unknown`.
+  - `tradeCount` and `tradeVolume` count only `Order`, `Buy` and `Sell`. Moving margin and cancelling are executes, not trades. `executeCount` counts all of them.
 
 ### Perpl Exchange
 

@@ -14,6 +14,18 @@ enum FlowKind {
   Fee
 }
 
+# What an AgentVault.execute did, from the adapter event earlier in the same tx.
+# Only Order, Buy and Sell are trades; margin moves and cancels are executes that aren't.
+enum ExecuteKind {
+  Order
+  Cancel
+  MarginIn
+  MarginOut
+  Buy
+  Sell
+  Unknown
+}
+
 enum PolicyKind {
   DailyLossBreach
   Frozen
@@ -54,8 +66,9 @@ type Vault {
   highWaterMark: BigInt! # raw AgentVault units (assets * 1e18 / shares): 1e12 is 1.0
   dayStart: Int!
   dayStartNav: BigInt!
-  tradeCount: Int!
-  tradeVolume: BigInt!
+  tradeCount: Int! # executes that were orders (Perpl) or buys/sells (Kuru)
+  tradeVolume: BigInt! # notional of those
+  executeCount: Int! # every execute, including margin moves and cancels
   breachCount: Int!
   freezeCount: Int!
   backerCount: Int!
@@ -79,10 +92,11 @@ type Backer {
   firstSeenAt: Int!
 }
 
-# One per AgentVault.Executed.
+# One per AgentVault.Executed. `kind` says whether it was a trade (see ExecuteKind).
 type Trade {
   id: ID! # chainId-block-logIndex
   vault: Vault!
+  kind: ExecuteKind!
   venue: String!
   notional: BigInt!
   venueDelta: BigInt!
