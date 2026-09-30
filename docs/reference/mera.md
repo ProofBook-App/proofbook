@@ -82,7 +82,15 @@ Clear storage or use a new device, click "Log in with any passkey", and `getPass
 - [x] Create an account with a passkey (rpId `proofbook.app`), which also starts the signing session in the same ceremony.
 - [x] Test funds, then approve and deposit with no further prompts: 200 AUSD into house agent #1's vault from `0x3Bd5…0D0E` (`0x92d5227d3311c4bcf6623409708ebbbc41cf8e975336d5b7448f2f836142c2c4`). The indexer, the site's activity feed and the backer count (2) all picked it up.
 - [x] **Stateless test:** clear site data, then "Log in with a passkey" gives the **same address**.
-- [ ] Not yet recorded: browser and authenticator used, prompt count, the taps and seconds to the first deposit, a withdrawal from the UI, and a true second device.
+- [x] **Browser, read from the test tab:** Chrome 153 on macOS (desktop). `getClientCapabilities()` reports `extension:prf: true`, `hybridTransport: true`, and a user-verifying platform authenticator is available.
+- [x] **Stored identity:** `proofbook.backer` holds only `{credential: {credentialId}, address}`. No transports were stored, and nothing else is in localStorage.
+- [x] **Providers:** a second account (`0x3fb41a1Ee5989522D67CfA843E7A08C17DD505d2`) was created in the same Chrome with **iCloud Keychain**. It stored transports `["hybrid", "internal"]` and a 20-byte credential ID. The first account's 16-byte ID with no transports points to Google Password Manager (inferred, not confirmed by name).
+- [x] **Withdrawal from the UI:** one passkey prompt to unlock, then 50 AUSD withdrawn with no further prompt (`0x93bb48b4d5660879572c779835558effa89f53cd49a790202c5ad01d5e3e4f1d`, block 67035944). Monad charged the 490,612 gas limit at 102 gwei, about 0.05 MON. The vault position went from 200.58 to 150.78 AUSD and the wallet from 9,800 to 9,850 AUSD.
+- [x] **First deposit, new account (iCloud Keychain):** the panel reported **3 taps, 59 s** (unlock, "Get test funds", deposit 100 AUSD). The 59 s overstates it: Claude drove the last two taps through Claude in Chrome, and the handoff added about 30 s. On chain, the drip's MON (`0x35f8…2626`) and AUSD (`0x749e…507a`) landed 2 s apart, and the approve (`0xb169…6fdf`) and deposit (`0xd10a5909bdd9462cf437c5cb8bcb07290a3ce19dd6e969fe0ff421a450fcc607`) landed 1 s apart with no prompt. A person tapping straight through should take roughly 10–15 s from the unlock prompt.
+- [ ] **Two issues to chase from this run:**
+  - The first two "Create an account" attempts ended in "The passkey prompt was cancelled or timed out". One was clicked in a background tab, and the cause of the other isn't known.
+  - After the successful create, the page came back locked with the stored identity. It looks like a reload, so the create-to-deposit count couldn't be measured in one page load.
+- [ ] Not yet recorded: the prompt count at creation (one if the provider returns PRF at create, two if Mera has to follow up with an assertion) and a true second device.
 
 ## Pending human verification for the spike (run `spikes/mera/README.md` → "Manual test script")
 
