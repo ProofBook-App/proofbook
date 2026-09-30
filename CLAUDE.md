@@ -21,9 +21,10 @@ Domain: `proofbook.app` (Cloudflare Registrar, served by the web Worker). GitHub
 - `docs/reference/mera.md`, `docs/reference/privy.md`, `docs/reference/kimi.md`: Day 0 spike findings (passkey accounts, server-wallet policies, Kimi tool calls)
 - `docs/reference/metamask.md`: Agent Wallet (`mm`) chain support and our Guard-mode server wallet
 - `docs/reference/hackathon.md`: deadline, rules, judging weights, bounty list, submission form
+- `docs/brand/voice.md`: how we write (banned AI-writing patterns). `docs/brand/research.md`: sourced figures, and only those marked verified go on the site. `web/DESIGN.md`: colour, type, layout. `PRODUCT.md`: product record for design work. Read them before writing copy or UI.
 - `.claude/rules/`: per-package rules that load automatically when working in `contracts/`, `indexer/`, `web/`, `agents|cli|plugin/`
 
-Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`).
+Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`) and `web/`.
 
 ## Commands
 

@@ -1,0 +1,19 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "proofbook-web",
+	"compatibility_date": "2026-09-26",
+	"main": "./workers/app.ts",
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+	// database_id is a placeholder until the production D1 database is created
+	// (`wrangler d1 create proofbook`). Local dev uses a local SQLite copy.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "proofbook",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "migrations"
+		}
+	]
+	// The proofbook.app custom domain is added when we first deploy.
+}

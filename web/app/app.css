@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource-variable/newsreader/opsz-italic.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+/* Proofbook, after agora.finance: warm paper, a dark ink hero with a halftone
+   chart, a serif display over a plain sans. See web/DESIGN.md.
+   Styling lives in Tailwind utilities; this file holds tokens and base styles only. */
+@theme {
+  --color-paper: #f8f7f4;
+  --color-panel: #efebe4;
+  --color-panel-2: #e6e0d5;
+  --color-ink: #1c1b18;
+  --color-muted: #625f58;
+  --color-line: #dcd6cb;
+  --color-night: #141a26;
+  --color-night-2: #1d2535;
+  --color-dot: #3b4a68;
+  --color-mist: #aab6cc;
+  --color-brass: #d8c27a;
+  --color-brass-hover: #e6d393;
+  --color-sand: #eed9b9;
+  --color-limit: #b23a26;
+  --color-gain: #2f6a47;
+
+  --font-serif: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, Menlo, monospace;
+
+  --shadow-card: 0 1px 2px rgb(28 27 24 / 0.06), 0 12px 32px -16px rgb(28 27 24 / 0.18);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    @apply scroll-pt-24 bg-paper font-sans text-[16px]/[1.6] text-ink antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  ::selection {
+    @apply bg-brass text-ink;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-3 outline-dot;
+  }
+}
