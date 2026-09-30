@@ -13,5 +13,8 @@
 			"migrations_dir": "migrations"
 		}
 	],
-	"routes": [{ "pattern": "proofbook.app", "custom_domain": true }]
+	"routes": [
+		{ "pattern": "proofbook.app", "custom_domain": true },
+		{ "pattern": "www.proofbook.app", "custom_domain": true }
+	]
 }

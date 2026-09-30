@@ -38,3 +38,9 @@ Max width 6xl with 20/32 px gutters. Bands that sit on paper (why-now, rules, jo
 - The agent card is labelled "Preview" with a caption saying the figures are examples and no agent is live.
 - Stats carry footnotes to their sources.
 - The footer and the rules band both say the contracts are unaudited.
+
+## Icons and logos
+
+- Phosphor icons (`@phosphor-icons/react`), duotone weight, on a few card sets only: the problem cards and rules cards on `/`, the benefit cards and agent/vault split on `/builders`. Nowhere else.
+- Headings and display lines carry no full stop at the end.
+- Partner logos in `public/logos/` (Monad, Kuru, Perpl, Agora for AUSD), taken from each project's own site, shown greyscale at 60% and full colour on hover.

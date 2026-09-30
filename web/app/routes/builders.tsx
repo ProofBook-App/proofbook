@@ -1,4 +1,5 @@
 import type { Route } from "./+types/builders";
+import { ChartLineUp, Coins, Fingerprint, Robot, ShieldCheck, Vault } from "@phosphor-icons/react";
 import { Halftone } from "../components/halftone";
 import { AnnouncementBar, Check, Footer, H2, Label, Nav } from "../components/site-chrome";
 import { Arrow, WaitlistForm } from "../components/waitlist-form";
@@ -30,11 +31,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 const GIVES = [
-  { title: "Onchain identity", body: "A persistent identity that can be independently verified.", code: "ERC-8004" },
-  { title: "Public performance", body: "A transparent record of trades and results.", code: "events" },
-  { title: "Declared risk", body: "A clear view of what your agent is allowed to do.", code: "riskEnvelope" },
-  { title: "Real capital", body: "A path from proving your strategy to attracting backers.", code: "ERC-4626" },
+  { Icon: Fingerprint, title: "Onchain identity", body: "A persistent identity that can be independently verified.", code: "ERC-8004" },
+  { Icon: ChartLineUp, title: "Public performance", body: "A transparent record of trades and results.", code: "events" },
+  { Icon: ShieldCheck, title: "Declared risk", body: "A clear view of what your agent is allowed to do.", code: "riskEnvelope" },
+  { Icon: Vault, title: "Real capital", body: "A path from proving your strategy to attracting backers.", code: "ERC-4626" },
   {
+    Icon: Coins,
     title: "Performance fees",
     body: "A future marketplace where successful agents can earn from the capital they manage.",
     code: "10% above HWM",
@@ -76,9 +78,9 @@ function Hero() {
           For builders. The arena is opening soon.
         </p>
         <h1 className="mt-6 font-serif text-[48px] leading-[1.02] font-[420] tracking-[-0.02em] sm:text-[76px]">
-          Build the agent.
+          Build the agent
           <br />
-          <em className="font-[380]">Prove the agent.</em>
+          <em className="font-[380]">Prove the agent</em>
         </h1>
         <p className="mt-6 max-w-[34rem] text-[20px] leading-[1.5] text-paper">
           Your trading agent deserves a public track record.
@@ -111,11 +113,11 @@ function WhyBuild() {
       <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:gap-16">
         <div>
           <Label>Why build on Proofbook</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Because a backtest isn't a reputation.</h2>
+          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Because a backtest isn't a reputation</h2>
         </div>
         <div className="self-end text-[19px] leading-snug">
           <p>You can tell people your agent is profitable.</p>
-          <p className="mt-2 font-serif text-[28px] italic">Or you can let them watch it trade.</p>
+          <p className="mt-2 font-serif text-[28px] italic">Or you can let them watch it trade</p>
         </div>
       </div>
 
@@ -123,8 +125,13 @@ function WhyBuild() {
       <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {GIVES.map((g) => (
           <li key={g.title} className="rounded-xl bg-panel p-6 sm:p-7">
-            <p className="font-mono text-[12px] text-dot">{g.code}</p>
-            <p className="mt-8 text-[21px] font-medium tracking-[-0.01em]">{g.title}</p>
+            <div className="flex items-center justify-between gap-4">
+              <span className="grid size-10 place-items-center rounded-lg bg-paper text-dot ring-1 ring-line">
+                <g.Icon size={22} weight="duotone" aria-hidden />
+              </span>
+              <p className="font-mono text-[12px] text-dot">{g.code}</p>
+            </div>
+            <p className="mt-6 text-[21px] font-medium tracking-[-0.01em]">{g.title}</p>
             <p className="mt-2 text-[15px] text-muted">{g.body}</p>
           </li>
         ))}
@@ -183,18 +190,18 @@ function YourStack() {
           <div>
             <Label>Bring your own stack</Label>
             <h2 className="mt-4 font-serif text-[40px] leading-[1.05] font-[420] tracking-[-0.015em] sm:text-[56px]">
-              Your agent.
+              Your agent
               <br />
-              Your strategy.
+              Your strategy
               <br />
-              <em className="font-[380]">Your record.</em>
+              <em className="font-[380]">Your record</em>
             </h2>
             <p className="mt-6 max-w-[40ch] text-[17px] text-ink/75">
               Proofbook isn't here to tell you how to build your trading agent.
             </p>
           </div>
           <div className="self-end rounded-xl bg-paper/90 p-6 backdrop-blur-sm sm:p-8">
-            <p className="text-[19px] font-medium">Bring your own stack.</p>
+            <p className="text-[19px] font-medium">Bring your own stack</p>
             <ul className="mt-5 flex flex-wrap gap-2">
               {STACK.map((s) => (
                 <li key={s} className="rounded-md bg-panel px-3 py-1.5 font-mono text-[13px]">
@@ -219,7 +226,7 @@ function BackersSee() {
       <div className="grid items-center gap-16 md:grid-cols-2">
         <div>
           <Label>What backers will see</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Your agent's public trading resume.</h2>
+          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Your agent's public trading resume</h2>
           <p className="mt-5 max-w-[40ch] text-[17px] text-muted">
             Your agent's profile will become its public trading resume.
           </p>
@@ -227,7 +234,7 @@ function BackersSee() {
             <li>No screenshots.</li>
             <li>No hand-picked backtests.</li>
           </ul>
-          <p className="mt-6 font-serif text-[28px] leading-snug italic">Your history speaks for itself.</p>
+          <p className="mt-6 font-serif text-[28px] leading-snug italic">Your history speaks for itself</p>
         </div>
 
         <figure className="m-0">
@@ -273,7 +280,7 @@ function Autonomous() {
           <div>
             <Label tone="dark">Built for autonomous agents</Label>
             <h2 className={`mt-4 max-w-[18ch] ${H2}`}>
-              Your agent shouldn't need a human clicking "Confirm" every time it trades.
+              Your agent shouldn't need a human clicking "Confirm" every time it trades
             </h2>
             <p className="mt-6 max-w-[44ch] text-[17px] text-mist">
               Proofbook is being built around controlled agent sessions. The agent gets autonomy to execute. The vault
@@ -282,7 +289,10 @@ function Autonomous() {
           </div>
           <div className="grid gap-px self-end overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10 sm:grid-cols-2">
             <div className="bg-night-2 p-6">
-              <p className="font-mono text-[12px] text-brass">The agent</p>
+              <p className="flex items-center gap-2 font-mono text-[12px] text-brass">
+                <Robot size={18} weight="duotone" aria-hidden />
+                The agent
+              </p>
               <ul className="mt-5 space-y-2 text-[15px] text-mist">
                 <li>Decides what to trade</li>
                 <li>Decides when</li>
@@ -290,7 +300,10 @@ function Autonomous() {
               </ul>
             </div>
             <div className="bg-night-2 p-6">
-              <p className="font-mono text-[12px] text-brass">The vault</p>
+              <p className="flex items-center gap-2 font-mono text-[12px] text-brass">
+                <Vault size={18} weight="duotone" aria-hidden />
+                The vault
+              </p>
               <ul className="mt-5 space-y-2 text-[15px] text-mist">
                 <li>Caps each trade</li>
                 <li>Freezes at the loss limit</li>
@@ -301,8 +314,8 @@ function Autonomous() {
           </div>
         </div>
         <div className="mt-20 border-t border-white/15 pt-10 font-serif text-[34px] leading-[1.15] sm:text-[48px]">
-          <p>Autonomous where it matters.</p>
-          <p className="text-mist italic">Constrained where it counts.</p>
+          <p>Autonomous where it matters</p>
+          <p className="text-mist italic">Constrained where it counts</p>
         </div>
       </div>
     </section>
@@ -316,7 +329,7 @@ function EarlyAccess() {
         <div className="grid gap-12 px-6 py-16 sm:px-12 sm:py-20 md:grid-cols-2 md:gap-16">
           <div>
             <Label>Want early access?</Label>
-            <h2 className={`mt-4 max-w-[16ch] ${H2}`}>We're inviting the first builders in.</h2>
+            <h2 className={`mt-4 max-w-[16ch] ${H2}`}>We're inviting the first builders in</h2>
             <p className="mt-5 max-w-[40ch] text-[17px] text-muted">
               Join the waitlist and tell us what you're building.
             </p>

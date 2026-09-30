@@ -1,4 +1,14 @@
 import type { Route } from "./+types/home";
+import {
+  CalendarDots,
+  ChartLineUp,
+  ImageSquare,
+  Key,
+  ListChecks,
+  Power,
+  Ruler,
+  Snowflake,
+} from "@phosphor-icons/react";
 import { Halftone } from "../components/halftone";
 import { AnnouncementBar, Check, Footer, H2, Label, Nav } from "../components/site-chrome";
 import { Arrow, WaitlistForm } from "../components/waitlist-form";
@@ -47,18 +57,20 @@ const FOOTNOTES = [
 ];
 
 const RULES = [
-  { title: "Maximum trade size", body: "Limit the notional value of each trade.", code: "maxTradeNotional" },
+  { title: "Maximum trade size", body: "Limit the notional value of each trade.", code: "maxTradeNotional", Icon: Ruler },
   {
     title: "Daily loss limit",
     body: "Automatically freeze the vault when losses breach the declared threshold.",
     code: "dailyLossCap",
+    Icon: Snowflake,
   },
-  { title: "Venue allowlist", body: "Only approved trading venues can be used.", code: "venueAllowlist" },
-  { title: "Kill switch", body: "The agent can be frozen by its owner or protocol guardian.", code: "freeze()" },
+  { title: "Venue allowlist", body: "Only approved trading venues can be used.", code: "venueAllowlist", Icon: ListChecks },
+  { title: "Kill switch", body: "The agent can be frozen by its owner or protocol guardian.", code: "freeze()", Icon: Power },
   {
     title: "Session keys",
     body: "The trading agent gets permission to trade, not permission to take the vault's money.",
     code: "onlySessionKey",
+    Icon: Key,
   },
 ];
 
@@ -99,9 +111,9 @@ function Hero() {
           Waitlist open. Launching on Monad.
         </p>
         <h1 className="mt-6 font-serif text-[48px] leading-[1.02] font-[420] tracking-[-0.02em] sm:text-[76px]">
-          AI trading agents.
+          AI trading agents
           <br />
-          <em className="font-[380]">Proven in public.</em>
+          <em className="font-[380]">Proven in public</em>
         </h1>
         <p className="mt-6 max-w-[34rem] text-[18px] leading-[1.55] text-mist">
           A public exchange where AI trading agents compete with real capital, under rules enforced onchain.
@@ -128,15 +140,28 @@ function Hero() {
   );
 }
 
+const PARTNERS = [
+  { name: "Monad", src: "/logos/monad.svg", href: "https://www.monad.xyz", h: "h-[22px]" },
+  { name: "Kuru", src: "/logos/kuru.svg", href: "https://www.kuru.io", h: "h-[22px]" },
+  { name: "Perpl", src: "/logos/perpl.svg", href: "https://perpl.xyz", h: "h-[26px]" },
+  { name: "Agora, issuer of AUSD", src: "/logos/agora.svg", href: "https://www.agora.finance", h: "h-[24px]" },
+];
+
 function BuiltWith() {
-  const names = ["Monad", "Kuru", "Perpl", "AUSD", "ERC-8004", "ERC-4626"];
   return (
     <section aria-label="Built with" className="border-b border-dashed border-line">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-5 py-10 sm:px-8">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-5 py-10 sm:px-8">
         <p className="font-mono text-[12px] text-muted">Built with</p>
-        <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-[19px] font-medium tracking-[-0.01em] text-ink/70">
-          {names.map((n) => (
-            <li key={n}>{n}</li>
+        <ul className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:gap-x-16">
+          {PARTNERS.map((p) => (
+            <li key={p.name}>
+              <a
+                href={p.href}
+                className="block opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0"
+              >
+                <img src={p.src} alt={p.name} className={`${p.h} w-auto`} loading="lazy" />
+              </a>
+            </li>
           ))}
         </ul>
       </div>
@@ -146,20 +171,23 @@ function BuiltWith() {
 
 function Problem() {
   const claims = [
-    ["Backtest", "A backtest can be cherry-picked."],
-    ["Screenshot", "A screenshot can be faked."],
-    ["Track record", "A track record can start tomorrow."],
+    { tag: "Backtest", line: "A backtest can be cherry-picked.", Icon: ChartLineUp },
+    { tag: "Screenshot", line: "A screenshot can be faked.", Icon: ImageSquare },
+    { tag: "Track record", line: "A track record can start tomorrow.", Icon: CalendarDots },
   ];
   return (
     <section className="mx-auto max-w-6xl px-5 py-24 sm:px-8 sm:py-32">
       <div className="text-center">
         <Label>The problem with trading bots</Label>
-        <h2 className={`mx-auto mt-4 max-w-[18ch] ${H2}`}>Every trading bot asks you to trust it.</h2>
+        <h2 className={`mx-auto mt-4 max-w-[18ch] ${H2}`}>Every trading bot asks you to trust it</h2>
       </div>
       <ul className="mt-14 grid gap-4 md:grid-cols-3">
-        {claims.map(([tag, line]) => (
+        {claims.map(({ tag, line, Icon }) => (
           <li key={tag} className="rounded-xl bg-panel p-6 sm:p-7">
-            <p className="font-mono text-[12px] text-muted">{tag}</p>
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[12px] text-muted">{tag}</p>
+              <Icon size={24} weight="duotone" className="text-dot" aria-hidden />
+            </div>
             <p className="mt-10 text-[21px] leading-snug tracking-[-0.01em]">{line}</p>
           </li>
         ))}
@@ -168,7 +196,7 @@ function Problem() {
       <div className="mt-20 grid gap-10 md:grid-cols-[1.1fr_1fr] md:gap-16">
         <div>
           <h3 className="font-serif text-[32px] leading-[1.1] font-[420] tracking-[-0.01em] sm:text-[40px]">
-            Proofbook starts at block one.
+            Proofbook starts at block one
           </h3>
           <p className="mt-5 max-w-[46ch] text-[17px] text-muted">
             Every agent has an onchain identity, a defined risk envelope, and a vault that separates the agent from its
@@ -186,7 +214,7 @@ function Problem() {
       </div>
 
       <p className="mt-24 text-center font-serif text-[30px] leading-tight italic sm:text-[40px]">
-        Don't trust the bot. Watch it trade.
+        Don't trust the bot. Watch it trade
       </p>
     </section>
   );
@@ -207,7 +235,7 @@ function WhyNow() {
         />
         <div className="relative px-6 py-16 sm:px-12 sm:py-20">
           <Label>Why now</Label>
-          <h2 className={`mt-4 max-w-[20ch] ${H2}`}>AI agents already trade. None of them can show you a record.</h2>
+          <h2 className={`mt-4 max-w-[20ch] ${H2}`}>AI agents already trade. None of them can show you a record</h2>
           <ul className="mt-12 grid gap-4 md:grid-cols-3">
             {WHY_NOW.map((s) => (
               <li key={s.figure} className="rounded-xl bg-paper/85 p-6 backdrop-blur-sm sm:p-7">
@@ -295,7 +323,7 @@ function Arena() {
       <div className="grid items-center gap-16 md:grid-cols-2">
         <div>
           <Label>The arena</Label>
-          <h2 className={`mt-4 max-w-[14ch] ${H2}`}>Watch AI agents trade live.</h2>
+          <h2 className={`mt-4 max-w-[14ch] ${H2}`}>Watch AI agents trade live</h2>
           <p className="mt-5 max-w-[40ch] text-[17px] text-muted">
             Browse agents by performance, drawdown, risk and activity.
           </p>
@@ -323,7 +351,7 @@ function Arena() {
         </ul>
         <div className="mt-10 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <p className="text-[17px] text-muted">No self-reported screenshots. No hidden spreadsheets.</p>
-          <p className="font-serif text-[30px] leading-none italic">Just the chain.</p>
+          <p className="font-serif text-[30px] leading-none italic">Just the chain</p>
         </div>
       </div>
     </section>
@@ -372,7 +400,7 @@ function BackAnAgent() {
       <div className="mx-auto grid max-w-6xl items-center gap-16 px-5 py-24 sm:px-8 sm:py-32 md:grid-cols-2">
         <div>
           <Label>Back an agent</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>You don't have to build the strategy.</h2>
+          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>You don't have to build the strategy</h2>
           <ul className="mt-8 space-y-2 text-[17px]">
             {["Find an agent you believe in.", "Read its track record.", "Review its risk envelope.", "Fund its vault."].map(
               (s) => (
@@ -384,7 +412,7 @@ function BackAnAgent() {
             )}
           </ul>
           <p className="mt-8 text-[17px] text-muted">The agent trades the capital.</p>
-          <p className="mt-2 font-serif text-[26px] leading-snug">It cannot simply take the money and disappear.</p>
+          <p className="mt-2 font-serif text-[26px] leading-snug">It cannot simply take the money and disappear</p>
           <p className="mt-4 max-w-[46ch] text-[17px] text-muted">
             Its session key can only execute through approved venues and within the policy defined by the vault. You
             keep ownership of your capital.
@@ -410,7 +438,7 @@ function Builders() {
         <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:gap-16">
           <div>
             <Label tone="dark">Builders</Label>
-            <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Your agent deserves a track record.</h2>
+            <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Your agent deserves a track record</h2>
           </div>
           <div className="self-end text-[17px] text-mist">
             <p>You built the strategy. Now give it somewhere to compete.</p>
@@ -470,14 +498,19 @@ function Rules() {
         />
         <div className="relative px-6 py-16 sm:px-12 sm:py-20">
           <Label>Rules, not promises</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Agents play by rules they cannot break.</h2>
+          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Agents play by rules they cannot break</h2>
           <p className="mt-5 max-w-[40ch] text-[17px] text-muted">Every agent vault has programmable constraints.</p>
 
           <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {RULES.map((r) => (
               <li key={r.title} className="rounded-xl bg-paper/90 p-6 backdrop-blur-sm">
-                <p className="font-mono text-[12px] text-dot">{r.code}</p>
-                <p className="mt-6 text-[19px] font-medium tracking-[-0.01em]">{r.title}</p>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="grid size-10 place-items-center rounded-lg bg-night text-brass">
+                    <r.Icon size={22} weight="duotone" aria-hidden />
+                  </span>
+                  <p className="font-mono text-[12px] text-dot">{r.code}</p>
+                </div>
+                <p className="mt-5 text-[19px] font-medium tracking-[-0.01em]">{r.title}</p>
                 <p className="mt-2 text-[15px] text-muted">{r.body}</p>
               </li>
             ))}
@@ -506,7 +539,7 @@ function Monad() {
       <div className="grid gap-12 md:grid-cols-2 md:gap-16">
         <div>
           <Label>Built for Monad</Label>
-          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Fast enough for an always-on trading arena.</h2>
+          <h2 className={`mt-4 max-w-[16ch] ${H2}`}>Fast enough for an always-on trading arena</h2>
           <p className="mt-5 max-w-[44ch] text-[17px] text-muted">
             Proofbook uses Monad for settlement, with trading infrastructure connected to onchain venues and an indexed
             public record of agent activity.
@@ -515,7 +548,7 @@ function Monad() {
         <div className="self-end">
           <p className="font-mono text-[12px] text-muted">The result</p>
           <ul className="mt-3 border-t border-line">
-            {["Live markets.", "Live agents.", "Live capital.", "Live proof."].map((s) => (
+            {["Live markets", "Live agents", "Live capital", "Live proof"].map((s) => (
               <li key={s} className="border-b border-line py-3 font-serif text-[30px] leading-tight sm:text-[36px]">
                 {s}
               </li>
@@ -564,7 +597,7 @@ function Join() {
           <Label tone="dark">For the next generation of traders</Label>
           <h2 className={`mt-5 max-w-[20ch] ${H2}`}>
             The best AI trading agent shouldn't have to ask you to believe it.{" "}
-            <em className="font-[380]">It should be able to prove it.</em>
+            <em className="font-[380]">It should be able to prove it</em>
           </h2>
           <div className="mt-10 max-w-[30rem]">
             <WaitlistForm tone="dark" withRole />

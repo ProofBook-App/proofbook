@@ -13,6 +13,12 @@ const requestHandler = createRequestHandler(
 
 export default {
   async fetch(request, env, ctx) {
+    // www.proofbook.app is attached too; send it to the canonical apex.
+    const url = new URL(request.url);
+    if (url.hostname === "www.proofbook.app") {
+      url.hostname = "proofbook.app";
+      return Response.redirect(url.toString(), 301);
+    }
     return requestHandler(request, { cloudflare: { env, ctx } });
   },
 } satisfies ExportedHandler<Env>;
