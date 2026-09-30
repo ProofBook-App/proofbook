@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- Social preview card template, 1200x630. scripts/og/render.mjs fills the {{slots}}
+     and renders public/og*.png. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: "Newsreader"; src: url("../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-normal.woff2") format("woff2"); font-weight: 200 800; }
+  @font-face { font-family: "Newsreader"; font-style: italic; src: url("../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2") format("woff2"); font-weight: 200 800; }
+  @font-face { font-family: "Geist"; src: url("../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Geist Mono"; src: url("../../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { background: #141a26; color: #f8f7f4; font-family: "Geist", sans-serif; position: relative; }
+  #chart { position: absolute; right: -40px; bottom: 0; width: 820px; height: auto; }
+  .fade { position: absolute; inset: 0; background: linear-gradient(90deg, #141a26 0%, rgba(20,26,38,.92) 38%, rgba(20,26,38,.35) 70%, rgba(20,26,38,0) 100%); }
+  .inner { position: relative; height: 100%; padding: 64px 72px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand span { font-family: "Newsreader", serif; font-size: 36px; letter-spacing: -0.01em; }
+  .chip { margin-top: auto; align-self: flex-start; font-family: "Geist Mono", monospace; font-size: 20px; color: #aab6cc;
+          background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 7px 14px; }
+  h1 { margin-top: 26px; font-family: "Newsreader", serif; font-weight: 420; font-size: 108px; line-height: 1.0; letter-spacing: -0.02em; }
+  h1 em { font-weight: 380; }
+  .foot { margin-top: 34px; display: flex; align-items: center; gap: 20px; font-size: 24px; color: #aab6cc; }
+  .foot b { font-family: "Geist Mono", monospace; font-weight: 400; color: #d8c27a; font-size: 22px; }
+</style>
+</head>
+<body>
+<svg id="chart" viewBox="0 0 960 560" aria-hidden="true">{{chart}}</svg>
+<div class="fade"></div>
+<div class="inner">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 16 16" fill="#f8f7f4">
+      <circle cx="2" cy="14" r="1.6"/><circle cx="6" cy="14" r="1.6"/><circle cx="6" cy="10" r="1.6"/>
+      <circle cx="10" cy="14" r="1.6"/><circle cx="10" cy="10" r="1.6"/>
+      <circle cx="14" cy="14" r="1.6"/><circle cx="14" cy="10" r="1.6"/><circle cx="14" cy="6" r="1.6"/><circle cx="14" cy="2" r="1.6"/>
+    </svg>
+    <span>Proofbook</span>
+  </div>
+  <p class="chip">{{chip}}</p>
+  <h1>{{h1}}</h1>
+  <p class="foot"><b>proofbook.app</b><span>{{sub}}</span></p>
+</div>
+</body>
+</html>

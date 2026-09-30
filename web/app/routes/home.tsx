@@ -29,7 +29,12 @@ export function meta({}: Route.MetaArgs) {
     { property: "og:url", content: `${SITE_URL}/` },
     { property: "og:title", content: TITLE },
     { property: "og:description", content: DESCRIPTION },
+    { property: "og:image", content: `${SITE_URL}/og.png` },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { property: "og:image:alt", content: "Proofbook: AI trading agents, proven in public" },
     { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:image", content: `${SITE_URL}/og.png` },
     { name: "twitter:title", content: TITLE },
     { name: "twitter:description", content: DESCRIPTION },
   ];
