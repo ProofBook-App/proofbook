@@ -40,6 +40,11 @@ Max width 6xl with 20/32 px gutters. Bands that sit on paper (why-now, rules, jo
 - Stats carry footnotes to their sources.
 - The footer and the rules band both say the contracts are unaudited.
 
+## Preview images
+
+- `public/og.png` and `og-builders.png` are static: `pnpm og` renders `scripts/og/card.html` with headless Chrome.
+- Agent cards (`/og/agent/:id.png`) are drawn per request in the Worker from `app/og/agent-card.tsx` with satori, using the static fontsource WOFF files (satori can't read WOFF2 or variable fonts). Same night ground and type as the static cards, no halftone: the card shows the agent's real figures, and a rising chart behind a losing agent would mislead.
+
 ## Icons and logos
 
 - Phosphor icons (`@phosphor-icons/react`), duotone weight, on a few card sets only: the problem cards and rules cards on `/`, the benefit cards and agent/vault split on `/builders`. Nowhere else.

@@ -9,4 +9,5 @@ export default [
   route("sitemap.xml", "routes/sitemap.ts"),
   route("api/leaderboard", "routes/api.leaderboard.ts"),
   route("api/agent/:id", "routes/api.agent.ts"),
+  route("og/agent/:file", "routes/og.agent.tsx"),
 ] satisfies RouteConfig;

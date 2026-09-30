@@ -32,12 +32,12 @@ export function meta({ loaderData, params }: Route.MetaArgs) {
     { property: "og:url", content: url },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
-    // TODO: /og/agent/:id.png (per-agent card from D1) once it exists.
-    { property: "og:image", content: `${SITE_URL}/og.png` },
+    { property: "og:image", content: `${SITE_URL}/og/agent/${params.id}.png` },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:image", content: `${SITE_URL}/og.png` },
+    { name: "twitter:image", content: `${SITE_URL}/og/agent/${params.id}.png` },
+    { property: "og:image:alt", content: `${a.name} on Proofbook: return, PnL, NAV, drawdown and limits status` },
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
   ];
