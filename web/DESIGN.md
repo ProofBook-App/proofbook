@@ -16,6 +16,7 @@ Inspired by agora.finance, at the user's request (2026-09-30): warm paper, a dar
 | sand | #eed9b9 | Announcement bar, "Why now" band |
 | limit | #b23a26 | Loss floor and limits only |
 | gain | #2f6a47 | Positive figures and policy checks |
+| limit-soft / gain-soft | #f0a08f / #8fd1a8 | The same, on night (agent profile hero) |
 
 Light only, like the reference.
 

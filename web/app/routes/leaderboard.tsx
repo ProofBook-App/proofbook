@@ -1,4 +1,5 @@
 import type { Route } from "./+types/leaderboard";
+import { AgentBadges } from "../components/agent-badges";
 import { Halftone } from "../components/halftone";
 import { AnnouncementBar, Footer, H2, Label, Nav } from "../components/site-chrome";
 import { addressUrl, assetSymbol, chainName } from "../lib/chains";
@@ -45,27 +46,14 @@ function syncedLabel(iso: string) {
   return `${iso.slice(11, 16)} UTC, ${month} ${d.getUTCDate()}`;
 }
 
-function Badges({ row }: { row: Row }) {
-  return (
-    <span className="flex flex-wrap gap-1.5">
-      {row.house && (
-        <span className="rounded border border-dashed border-dot/50 px-1.5 py-px font-mono text-[11px] text-dot">
-          House agent
-        </span>
-      )}
-      {row.frozen && (
-        <span className="rounded bg-limit/10 px-1.5 py-px font-mono text-[11px] text-limit">Frozen</span>
-      )}
-    </span>
-  );
-}
-
 function AgentCell({ row, chainId }: { row: Row; chainId: number }) {
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-[17px] font-medium tracking-[-0.01em]">{row.name}</span>
-        <Badges row={row} />
+        <a href={`/agent/${row.agentId}`} className="text-[17px] font-medium tracking-[-0.01em] underline decoration-line underline-offset-4 hover:decoration-ink">
+          {row.name}
+        </a>
+        <AgentBadges house={row.house} frozen={row.frozen} />
       </div>
       <p className="mt-1 font-mono text-[12px] text-muted">
         ERC-8004 #{row.agentId}, vault{" "}

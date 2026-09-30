@@ -36,6 +36,13 @@ export function tone(value: string | bigint | number) {
   return n > 0 ? "text-gain" : n < 0 ? "text-limit" : "text-ink";
 }
 
+// Unix seconds as "Sep 30, 14:07 UTC". UTC so the server and client render the same text.
+export function formatTime(unix: number) {
+  const d = new Date(unix * 1000);
+  const month = d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+  return `${month} ${d.getUTCDate()}, ${d.toISOString().slice(11, 16)} UTC`;
+}
+
 export function shortAddress(a: string) {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }

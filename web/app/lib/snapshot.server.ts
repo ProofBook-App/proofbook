@@ -284,6 +284,11 @@ function openPnlByVault(rows: PositionRow[]) {
   return sums;
 }
 
+// Best share-price return first; ties go to the vault with more trades, then the older agent.
+function byRank(a: LeaderboardAgent, b: LeaderboardAgent) {
+  return b.returnBps - a.returnBps || b.tradeCount - a.tradeCount || a.createdAt - b.createdAt;
+}
+
 export async function readLeaderboard(env: SnapshotEnv) {
   const chainId = Number(env.CHAIN_ID);
   const meta = await ensureSnapshot(env, chainId);
@@ -294,8 +299,7 @@ export async function readLeaderboard(env: SnapshotEnv) {
   const open = openPnlByVault(positions.results as PositionRow[]);
   const agents = (vaults.results as VaultRow[])
     .map((r) => toAgent(chainId, r, open.has(r.vault) ? open.get(r.vault)! : 0n))
-    // Best share-price return first; ties go to the vault with more trades, then the older agent.
-    .sort((a, b) => b.returnBps - a.returnBps || b.tradeCount - a.tradeCount || a.createdAt - b.createdAt)
+    .sort(byRank)
     .map((a, i) => ({ rank: i + 1, ...a }));
   return { ...toMeta(chainId, meta), agents };
 }
@@ -303,10 +307,11 @@ export async function readLeaderboard(env: SnapshotEnv) {
 export async function readAgent(env: SnapshotEnv, agentId: string, navPointLimit = 500) {
   const chainId = Number(env.CHAIN_ID);
   const meta = await ensureSnapshot(env, chainId);
-  const row = await env.DB.prepare(`SELECT * FROM vaults WHERE chain_id = ?1 AND agent_id = ?2`)
-    .bind(chainId, agentId)
-    .first<VaultRow>();
+  // Every vault, to place this one on the board. There are few enough that this is one small read.
+  const all = await env.DB.prepare(`SELECT * FROM vaults WHERE chain_id = ?1`).bind(chainId).all<VaultRow>();
+  const row = all.results.find((r) => r.agent_id === agentId);
   if (!row) return null;
+  const rank = all.results.map((r) => toAgent(chainId, r, null)).sort(byRank).findIndex((a) => a.agentId === agentId) + 1;
   const [positions, navPoints] = await env.DB.batch([
     env.DB.prepare(`SELECT * FROM positions WHERE chain_id = ?1 AND vault = ?2 ORDER BY id`).bind(chainId, row.vault),
     // Latest points, returned oldest first for charting.
@@ -321,6 +326,8 @@ export async function readAgent(env: SnapshotEnv, agentId: string, navPointLimit
   return {
     ...toMeta(chainId, meta),
     agent: toAgent(chainId, row, open.has(row.vault) ? open.get(row.vault)! : 0n),
+    rank,
+    of: all.results.length,
     positions: positionRows.map(toPosition),
     navPoints: (navPoints.results as { nav: string; share_price: string; timestamp: number; block: number }[]).map(
       (n) => ({ nav: n.nav, sharePrice: n.share_price, timestamp: n.timestamp, block: n.block }),

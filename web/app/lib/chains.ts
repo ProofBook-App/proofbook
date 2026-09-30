@@ -1,15 +1,26 @@
 // Per-chain display facts: network name, explorer and vault asset symbols.
-// Addresses are the ones in the README and docs/reference (monad.md, perpl.md).
-const CHAINS: Record<number, { name: string; explorer: string; assets: Record<string, string> }> = {
+// Addresses and perp decimals are the ones in the README and docs/reference (monad.md, perpl.md).
+type Perp = { name: string; priceDecimals: number; lotDecimals: number };
+const CHAINS: Record<
+  number,
+  { name: string; explorer: string; assets: Record<string, string>; perps: Record<string, Perp> }
+> = {
   143: {
     name: "Monad",
     explorer: "https://monadvision.com",
     assets: { "0x00000000efe302beaa2b3e6e1b18d08d69a9012a": "AUSD" },
+    perps: {
+      "1": { name: "BTC", priceDecimals: 1, lotDecimals: 5 },
+      "10": { name: "MON", priceDecimals: 6, lotDecimals: 0 },
+      "20": { name: "ETH", priceDecimals: 2, lotDecimals: 3 },
+      "31": { name: "SOL", priceDecimals: 3, lotDecimals: 3 },
+    },
   },
   10143: {
     name: "Monad testnet",
     explorer: "https://testnet.monadvision.com",
     assets: { "0xa9012a055bd4e0edff8ce09f960291c09d5322dc": "AUSD" },
+    perps: { "64": { name: "MON", priceDecimals: 5, lotDecimals: 0 } },
   },
 };
 
@@ -17,8 +28,21 @@ export function chainName(chainId: number) {
   return CHAINS[chainId]?.name ?? `Chain ${chainId}`;
 }
 
+function explorer(chainId: number) {
+  return CHAINS[chainId]?.explorer ?? "https://monadvision.com";
+}
+
 export function addressUrl(chainId: number, address: string) {
-  return `${CHAINS[chainId]?.explorer ?? "https://monadvision.com"}/address/${address}`;
+  return `${explorer(chainId)}/address/${address}`;
+}
+
+export function txUrl(chainId: number, hash: string) {
+  return `${explorer(chainId)}/tx/${hash}`;
+}
+
+// Undefined for a perp we haven't checked: show its raw Perpl units rather than guess.
+export function perpInfo(chainId: number, perpId: string): Perp | undefined {
+  return CHAINS[chainId]?.perps[perpId];
 }
 
 export function assetSymbol(chainId: number, asset: string) {

@@ -61,7 +61,7 @@ Envio HyperIndex on Envio Cloud (`indexer/`, deployed from the `envio` branch). 
 
 ### Leaderboard API (web Worker)
 
-https://proofbook.app/leaderboard is rendered from this snapshot. A cron in the web Worker copies the indexer into D1 every minute (`web/app/lib/snapshot.server.ts`, tables in `web/migrations/0003_snapshot.sql`). Pages and the JSON API read that snapshot, so they keep working when Envio is down.
+https://proofbook.app/leaderboard and every agent profile (`/agent/:id`, e.g. https://proofbook.app/agent/1951) are rendered from this snapshot. A cron in the web Worker copies the indexer into D1 every minute (`web/app/lib/snapshot.server.ts`, tables in `web/migrations/0003_snapshot.sql`). Pages and the JSON API read that snapshot, so they keep working when Envio is down.
 
 - `GET /api/leaderboard`: every agent vault, ranked by share-price return. House agents carry `"house": true`.
 - `GET /api/agent/:id`: one agent by ERC-8004 id, with its open Perpl positions, share-price history, and the latest trades, flows and policy events (read live from the indexer).
