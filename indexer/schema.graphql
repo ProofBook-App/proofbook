@@ -160,3 +160,104 @@ type Asset {
   id: ID! # token address, allowlisted by the registry
   allowedAt: Int!
 }
+
+# ------------------------------------------------------------------ Perpl Exchange
+# Raw Perpl units: prices PNS (perp priceDecimals), lots LNS (perp lotDecimals), collateral CNS (AUSD, 6 dp).
+
+enum PositionSide {
+  None
+  Long
+  Short
+}
+
+enum FillRole {
+  Taker
+  Maker
+}
+
+# A perp one of our adapters has traded.
+type Perp {
+  id: ID! # Perpl perpId
+  # CNS per (PNS x LNS) = 10^scaleExp, i.e. 6 - priceDecimals - lotDecimals. Learned from the first
+  # OrderSent (notional / (price x lot), rounded to a power of ten); null until then.
+  scaleExp: Int
+  markPrice: BigInt
+  markUpdatedAt: Int
+}
+
+# A Perpl account owned by one of our PerplAdapters.
+type PerplAccount {
+  id: ID! # Perpl accountId
+  adapter: Adapter!
+  vault: Vault!
+  realisedPnl: BigInt! # sum of deltaPnlCNS on decreases, closes, inversions, liquidations, deleverages
+  funding: BigInt! # sum of fundingCNS on the same events
+  fees: BigInt! # taker + maker feeCNS
+  fillCount: Int!
+  volume: BigInt! # fill notional in CNS, where the perp's scale is known
+  lastFill: String # id of the latest PerplFill, so OrderSent can price a first fill
+  positions: [PerplPosition!]! @derivedFrom(field: "account")
+  fills: [PerplFill!]! @derivedFrom(field: "account")
+  changes: [PerplPositionChange!]! @derivedFrom(field: "account")
+}
+
+type PerplPosition {
+  id: ID! # accountId-perpId
+  account: PerplAccount!
+  vault: String! @index
+  perp: Perp!
+  perpId: String! @index # for MarkUpdated to find the positions it reprices
+  side: PositionSide!
+  lot: BigInt!
+  entryPrice: BigInt! # lot-weighted average of the fills that built the position
+  deposit: BigInt!
+  leverageHdths: BigInt!
+  realisedPnl: BigInt!
+  funding: BigInt!
+  # At the last MarkUpdated; null until the perp's scale is known.
+  notional: BigInt
+  unrealisedPnl: BigInt
+  openedAt: Int!
+  updatedAt: Int!
+}
+
+type PerplFill {
+  id: ID!
+  account: PerplAccount!
+  vault: String! @index
+  perp: Perp
+  role: FillRole!
+  price: BigInt!
+  lot: BigInt!
+  fee: BigInt!
+  notional: BigInt
+  orderId: BigInt
+  timestamp: Int!
+  txHash: String! @index
+}
+
+# One per Perpl position event on our accounts.
+type PerplPositionChange {
+  id: ID!
+  account: PerplAccount!
+  vault: String! @index
+  perp: Perp!
+  kind: String! # Opened, Increased, Decreased, Closed, Inverted, Liquidated, Deleveraged, Unwound, UnwoundWithoutPayment
+  side: PositionSide!
+  price: BigInt
+  lotBefore: BigInt!
+  lotAfter: BigInt!
+  depositAfter: BigInt
+  deltaPnl: BigInt
+  funding: BigInt
+  timestamp: Int!
+  txHash: String!
+}
+
+# Links a tx to the account whose position it changed, so the TakerOrderFilledV2 that follows in the
+# same tx (it carries no accountId) can be attributed. Verified order on testnet: position event, then taker fill.
+type PerplTxAccount {
+  id: ID! # tx hash
+  account: PerplAccount!
+  perp: Perp!
+}

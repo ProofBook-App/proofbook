@@ -39,6 +39,25 @@ contracts:
       - event: Bought
       - event: Sold
       - event: Unwound
+  # Perpl Exchange. Its events have no indexed fields, so every log of these types is fetched and the handlers
+  # keep only accounts our PerplAdapters own (PerplAccount, from MarginDeposited). OrderRequestV2 and the
+  # order-book events are left out: they are ~90% of the Exchange's logs. ABI subset from PerplFoundation/dex-sdk
+  # (MIT) crates/sdk/abi/dex/Exchange.json @ 01b9910 (contract rc_v1.1.7).
+  - name: PerplExchange
+    abi_file_path: abis/PerplExchange.json
+    events:
+      - event: MarkUpdated
+      - event: TakerOrderFilledV2
+      - event: MakerOrderFilledV2
+      - event: PositionOpenedV2
+      - event: PositionIncreasedV2
+      - event: PositionDecreased
+      - event: PositionClosed
+      - event: PositionInverted
+      - event: PositionLiquidated
+      - event: PositionDeleveragedV2
+      - event: PositionUnwoundV2
+      - event: PositionUnwoundWithoutPaymentV2
 chains:
   # Monad testnet: registry 0x25D4…8ABC (deploy block 66759038), real Perpl testnet.
   - id: 10143
@@ -57,3 +76,6 @@ chains:
           - 0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC
       - name: AgentVault
       - name: VenueAdapter
+      - name: PerplExchange
+        address:
+          - 0x1964C32f0bE608E7D29302AFF5E61268E72080cc

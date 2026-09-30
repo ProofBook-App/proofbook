@@ -9,7 +9,7 @@
     "dev": "envio dev",
     "start": "envio start",
     "stop": "envio stop",
-    "test": "vitest run --test-timeout=20000"
+    "test": "vitest run --test-timeout=120000"
   },
   "dependencies": {
     "envio": "3.12.1"

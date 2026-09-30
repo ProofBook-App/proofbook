@@ -5,6 +5,7 @@ import { createTestIndexer } from "envio";
 const REGISTRY_DEPLOY = 66_759_038;
 const BIND = 66_759_298;
 const FIRST_TRADE = [66_916_940, 66_916_945] as const; // deposit 400, margin 100, MON long
+const FIRST_MON_MARK = 66_916_949; // MarkUpdated(64, 2730)
 const VAULT = "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53";
 const ADAPTER = "0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09";
 const AUSD = "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC";
@@ -36,5 +37,28 @@ describe("house agent #1 on Monad testnet", () => {
     t.expect(adapter.perplAccountId).toBe(740n);
     t.expect(adapter.perplMarginIn).toBe(100_000_000n);
     t.expect(adapter.perplOrderCount).toBe(1);
+
+    // Perpl Exchange side, decoded by hand from tx 0x0c6a…0fdc: PositionOpenedV2(64, 740, Long, 1x,
+    // deposit 50.0872, price 2736, 1828 lots), then TakerOrderFilledV2(fee 17255 = insFee 2589 + protFee 14666).
+    const account = await indexer.PerplAccount.getOrThrow("740");
+    t.expect(account.vault_id).toBe(VAULT);
+    t.expect(account.fees).toBe(17_255n);
+    t.expect(account.fillCount).toBe(1);
+    t.expect(account.volume).toBe(50_014_080n); // 2736 x 1828 x 10^1
+
+    t.expect((await indexer.Perp.getOrThrow("64")).scaleExp).toBe(1); // MON: 5 price dp, 0 lot dp
+
+    const fills = await indexer.PerplFill.getAll();
+    t.expect(fills).toHaveLength(1);
+    t.expect(fills[0]).toMatchObject({ role: "Taker", price: 2_736n, lot: 1_828n, fee: 17_255n, notional: 50_014_080n });
+
+    const pos = await indexer.PerplPosition.getOrThrow("740-64");
+    t.expect(pos).toMatchObject({ side: "Long", lot: 1_828n, entryPrice: 2_736n, deposit: 50_087_200n, leverageHdths: 100n });
+    t.expect(pos.unrealisedPnl).toBeUndefined(); // no mark seen yet
+
+    await indexer.process({ chains: { 10143: { startBlock: FIRST_TRADE[1] + 1, endBlock: FIRST_MON_MARK } } });
+    const marked = await indexer.PerplPosition.getOrThrow("740-64");
+    t.expect(marked.notional).toBe(49_904_400n); // 2730 x 1828 x 10
+    t.expect(marked.unrealisedPnl).toBe(-109_680n);
   });
 });

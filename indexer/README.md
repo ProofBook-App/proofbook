@@ -10,13 +10,14 @@ The registry is the only hard-coded address. Every other contract is registered 
 |---|---|---|
 | AgentRegistry `0x25D4…8ABC` (testnet) | config | `AssetAllowed`, `AgentRegistered`, `VaultLinked` |
 | AgentVault | `VaultLinked` | ERC-4626 `Deposit`/`Withdraw`, share `Transfer`, `Executed`, `PolicyBreach`, `Frozen`, `Unfrozen`, `FeeTaken`, `SessionKeyRotated`, `DayRolled` |
+| PerplExchange `0x1964…80cc` (testnet) | config | position, fill and mark events (below) |
 | VenueAdapter (Perpl and Kuru) | `AgentRegistered` `envelope.venues` | `Bound`, Perpl `MarginDeposited`/`MarginWithdrawn`/`Recalled`/`PerpTracked`/`OrderSent`, Kuru `Bought`/`Sold`/`Unwound` |
 
 The `AgentRegistered` event doesn't say which kind of adapter a venue is. So `VenueAdapter` merges the events of both kinds, and `Adapter.kind` is set by the first event that only one kind emits.
 
 ## Entities
 
-`Agent`, `Vault`, `Backer`, `Trade`, `Flow`, `PolicyEvent`, `NavPoint`, `Adapter`, `VenueAction`, `Asset`. See `schema.graphql`.
+`Agent`, `Vault`, `Backer`, `Trade`, `Flow`, `PolicyEvent`, `NavPoint`, `Adapter`, `VenueAction`, `Asset`, and for Perpl `Perp`, `PerplAccount`, `PerplPosition`, `PerplFill`, `PerplPositionChange`. See `schema.graphql`.
 
 ### Per-vault leaderboard fields
 
@@ -27,9 +28,19 @@ The `AgentRegistered` event doesn't say which kind of adapter a venue is. So `Ve
 - **`pnl`:** `nav + withdrawn + feesPaid - deposited`.
 - **Activity and policy:** `tradeCount`, `tradeVolume`, `breachCount`, `freezeCount`, `frozen`, and `backerCount` (holders with shares > 0).
 
-### Not indexed yet
+### Perpl Exchange
 
-Perpl fills and positions happen inside the Perpl Exchange. `OrderSent` records the order, not the fill, so open Perpl exposure is still missing. Indexing the Exchange's events for our adapters' account ids is the next step (see `docs/reference/perpl.md`).
+The indexer reads the Exchange's position, fill and mark events (`MarkUpdated`, `TakerOrderFilledV2`, `MakerOrderFilledV2`, and the `Position*` events), and keeps only the accounts our PerplAdapters own (`PerplAccount`, created from `MarginDeposited`).
+
+- **Why the whole stream:** the Exchange has no indexed fields, so every log of those types is fetched.
+- **What's left out:** `OrderRequestV2` and the order-book events, which are about 90% of the Exchange's logs.
+- **Taker fills:** `TakerOrderFilledV2` carries no account, so it is matched to the position event earlier in the same tx (`PerplTxAccount`).
+- **`PerplPosition`:** side, lot, average entry, deposit, and realised PnL and funding. It also has notional and unrealised PnL at the last mark.
+- **`PerplAccount`:** fees, fill count, volume and realised PnL.
+- **`PerplFill`** and **`PerplPositionChange`** keep the history.
+- **Perp decimals:** the scale comes from the first `OrderSent` on that perp. `Perp.scaleExp` is the power of ten of CNS per PNS × LNS, which is 1 for MON.
+
+See `docs/reference/perpl.md` for the event facts and what is still unverified.
 
 ## Run
 
@@ -47,7 +58,7 @@ GraphQL is served by Hasura at http://localhost:8080, and the admin secret is `t
 pnpm test
 ```
 
-`pnpm test` replays house agent #1's real testnet history: registration, the 400 AUSD deposit and the first Perpl long. It asserts values that were checked against the onchain events.
+`pnpm test` replays house agent #1's real testnet history: registration, the 400 AUSD deposit, the first Perpl long (position, taker fill and fee), and unrealised PnL at the next MON mark. It asserts values that were checked against the onchain events.
 
 ### After changing contract events
 

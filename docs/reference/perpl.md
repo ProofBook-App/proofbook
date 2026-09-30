@@ -100,11 +100,40 @@ The upstream DelegatedAccount fork test uses testnet values (BTC = `0x10`, testn
   - `/ws/v1/trading`
 - **Per-account data** (positions, fills, account events including liquidations) needs an API key. There is **no public global liquidation feed**. Index Exchange events onchain with Envio instead.
 
+## Exchange events (checked 2026-09-30)
+
+The source is the Exchange ABI in PerplFoundation/dex-sdk (MIT), at `crates/sdk/abi/dex/Exchange.json` @ `01b9910`, contract rc_v1.1.7. It lists 204 events. Perpl's `IExchange.sol` has none, and the Exchange isn't verified on Sourcify.
+
+- **No event has an indexed field.** Filtering by account has to happen in the handler, so an indexer fetches every log of each type it indexes.
+- **Both chains emit the V2 events** (`OrderRequestV2`, `PositionOpenedV2`, `MakerOrderFilledV2`, …). The V1 events are only in pre-v1.1.7.4 history.
+- **Volume over 100 blocks** (2026-09-30):
+
+  | | Testnet | Mainnet |
+  |---|---|---|
+  | Logs per block | ~24 | ~68 |
+  | `OrderRequestV2` share | 46% | 41% |
+
+  Most of the rest is `OrderChanged`, `OrderBatchCompleted`, `OrderCancelled` and `OrderPlaced`. The position, fill and `MarkUpdated` events together come to about 1–2 per block.
+- **Order of logs in one taker order** (testnet tx `0x0c6a…0fdc`):
+  1. `OrderRequestV2`
+  2. The maker's `PositionIncreasedV2`
+  3. `MakerOrderFilledV2`
+  4. The taker's `PositionOpenedV2`
+  5. `TakerOrderFilledV2`
+- **`TakerOrderFilledV2` has no accountId or perpId.**
+  - dex-sdk attributes it through the preceding `OrderRequestV2`.
+  - Our indexer attributes it through the taker's position event earlier in the same tx, so it doesn't have to index `OrderRequestV2`.
+- **Fees are counted once.** `TakerOrderFilledV2.feeCNS` (17255) = `PositionOpenedV2.insFeeCNS` (2589) + `protFeeCNS` (14666).
+- **`positionType`:** 0 Long, 1 Short (dex-sdk `PositionType`).
+- **Perp decimals** are only in `ContractAdded(V2)`, which was emitted when the perp was listed, long before our start block. The indexer instead learns each perp's CNS scale from our own `OrderSent`.
+- **Liquidations are public onchain:** `PositionLiquidated` carries `posAccountId`.
+
 ## Unverified ⚠️
 
-- Event names for indexing (not read yet). PerplAdapter emits its own `MarginDeposited`, `MarginWithdrawn`, `OrderSent`, `Recalled`, `Bound`, so the leaderboard does not depend on them.
+- `PositionInverted.positionType`: the indexer assumes it's the side after the flip.
+- `PositionLiquidated.posLotLNS`: the indexer assumes it's the lot before liquidation, with `liqLotLNS` the part liquidated.
+- Whether one taker order that matches several makers emits one taker position event or one per match. Attribution works either way, because it's keyed by tx.
 - Perp IDs above 100, and price/lot decimals for HYPE and later markets.
-- Whether liquidation events are public onchain in a usable form.
 
 ## Exchange behaviour probed on testnet (2026-09-29)
 
