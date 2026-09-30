@@ -77,7 +77,14 @@ Clear storage or use a new device, click "Log in with any passkey", and `getPass
 9. **Vite dev first load** can fail to hydrate with "504 Outdated Optimize Dep". Fixed with `optimizeDeps.include` for Mera, scure and viem (see `spikes/mera/vite.config.ts`).
 10. **Session start costs a prompt.** In the spike, "Log in" and "Start session" are separate ceremonies (two prompts in total). The real app should start the session from the login ceremony (one prompt to first signature).
 
-## Pending human verification (run `spikes/mera/README.md` → "Manual test script")
+## Verified in production (2026-09-30, human test on https://proofbook.app/agent/1951)
+
+- [x] Create an account with a passkey (rpId `proofbook.app`), which also starts the signing session in the same ceremony.
+- [x] Test funds, then approve and deposit with no further prompts: 200 AUSD into house agent #1's vault from `0x3Bd5…0D0E` (`0x92d5227d3311c4bcf6623409708ebbbc41cf8e975336d5b7448f2f836142c2c4`). The indexer, the site's activity feed and the backer count (2) all picked it up.
+- [x] **Stateless test:** clear site data, then "Log in with a passkey" gives the **same address**.
+- [ ] Not yet recorded: browser and authenticator used, prompt count, the taps and seconds to the first deposit, a withdrawal from the UI, and a true second device.
+
+## Pending human verification for the spike (run `spikes/mera/README.md` → "Manual test script")
 
 - [ ] Create a passkey on localhost (browser, authenticator, number of prompts).
 - [ ] Reload shows the cached address. `localStorage` holds only `credentialId`, transports and address.
