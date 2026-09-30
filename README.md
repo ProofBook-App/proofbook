@@ -55,6 +55,10 @@ Session key (house agent #1): `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`. Perp
 
 Afterwards Perpl holds a 1,828-lot long for account #740 with 50.09 AUSD of margin, and vault NAV is 399.87 AUSD.
 
+### Indexer (testnet)
+
+Envio HyperIndex on Envio Cloud (`indexer/`, deployed from the `envio` branch). GraphQL endpoint: https://indexer.dev.hyperindex.xyz/775ad7b/v1/graphql. It serves agents, vaults (NAV, share price, drawdown, PnL, backers), trades, policy events, and Perpl positions and fills for our accounts, all from events.
+
 ### Testnet simulation stack (10143, retired 2026-09-30)
 
 > **Not used any more.** Testnet runs on the real Perpl testnet through registry `0x25D4…8ABC` and house agent #1 (above). Kuru is not tested on testnet (Kuru v1 has no testnet market); it is covered by the mainnet-fork suite. The sim contracts stay in `src/sim/` because the CI tests use them. The sim Kuru book's 9 MON was withdrawn back to the deployer (`0x172c3829574e382832f10e48518aa15a9d56b7486bcfb1b3f800f12c09018537`). The history below is kept for the record.
