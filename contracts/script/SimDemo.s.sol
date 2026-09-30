@@ -8,18 +8,22 @@ import {IPerplExchange} from "../src/interfaces/external/IPerplExchange.sol";
 import {SimToken} from "../src/sim/SimToken.sol";
 import {Chains} from "./Chains.sol";
 
-/// @notice TESTNET SIM ONLY. Seeds activity on a sim Perpl house vault: a backer draws simAUSD from
-/// the faucet and deposits, then the session key moves margin to the venue and opens a small MON long
-/// at the live Perpl testnet price. Every call goes through the production vault and adapter.
+/// @notice TESTNET ONLY. Seeds activity on a Perpl house vault: a backer deposits AUSD, then the session
+/// key moves margin to the venue and opens a small MON long at the live Perpl testnet price. Every call
+/// goes through the production vault and adapter. Works on a sim vault (draws simAUSD from the sim
+/// faucet) and on a real-Perpl testnet vault (the backer must already hold testnet AUSD, e.g. from
+/// Agora's faucet, see docs/reference/perpl.md).
 ///
 /// Env: VAULT, BACKER_PK, SESSION_KEY_PK. Optional DEPOSIT (default 400e6), MARGIN (100e6, at most the max trade), LONG_USD (50e6).
 /// forge script script/SimDemo.s.sol --rpc-url monad_testnet --broadcast --slow
 contract SimDemo is Script {
     function run() external {
         require(block.chainid == Chains.TESTNET, "SimDemo: testnet only");
-        Chains.Config memory c = Chains.testnetSim();
         AgentVault vault = AgentVault(payable(vm.envAddress("VAULT")));
-        require(vault.asset() == c.ausd, "SimDemo: not a sim Perpl vault");
+        Chains.Config memory c = Chains.testnetSim();
+        bool sim = vault.asset() == c.ausd;
+        if (!sim) c = Chains.get(Chains.TESTNET);
+        require(vault.asset() == c.ausd, "SimDemo: not a testnet Perpl vault");
         address adapter = vault.venues()[0];
         uint256 deposit = vm.envOr("DEPOSIT", uint256(400e6));
         uint256 margin = vm.envOr("MARGIN", uint256(100e6));
@@ -28,7 +32,7 @@ contract SimDemo is Script {
         uint256 backerPk = vm.envUint("BACKER_PK");
         address backer = vm.addr(backerPk);
         vm.startBroadcast(backerPk);
-        SimToken(c.ausd).faucet(backer, deposit);
+        if (sim) SimToken(c.ausd).faucet(backer, deposit);
         IERC20(c.ausd).approve(address(vault), deposit);
         vault.deposit(deposit, backer);
         vm.stopBroadcast();

@@ -44,9 +44,20 @@ Deployed 2026-09-29. All source-verified on MonadVision (Sourcify). Explorer: ht
 
 Session key (house agent #1): `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
 
+**First real Perpl trade (2026-09-30).** After Agora refilled its testnet faucet (`requestFunds`, 10,000 AUSD: `0x7164ee723e593acdcc62bc1f7a0d099c17ef7619fc23e9e16ab8695dcbd6e8f7`), `script/SimDemo.s.sol` ran against house agent #1 on the real Perpl testnet Exchange:
+
+| Step | Tx |
+|---|---|
+| Backer approves 400 AUSD | `0x16ac25d08e3ef51277380693886db7cceab3e9ffa144c9af912c661898758587` |
+| Backer deposits 400 AUSD | `0x3f5ab6eaf44f17394eb93942f1ad36f5d9d633a29adfc92d771659ba6a18429e` |
+| Session key: 100 AUSD margin to Perpl (the adapter opens Perpl account #740) | `0x59c5b35521647675ebe8565f7181b3e74a75def81b315848c171dcf9cfd6ea92` |
+| Session key: MON long, 1,828 lots (~$50) at 0.02736, 1x, IOC | `0x0c6a327be18e5a25c47c0ea61aaa460548375124632abef2e1a905aab6e00fdc` |
+
+Afterwards Perpl holds a 1,828-lot long for account #740 with 50.09 AUSD of margin, and vault NAV is 399.87 AUSD.
+
 ### Testnet simulation stack (10143)
 
-Agora's testnet AUSD faucet is empty and Kuru v1 has no testnet market, so testnet also runs a **simulation stack**. The registry, vaults and adapters are the unchanged production contracts. Only the venues and tokens are stand-ins (`contracts/src/sim/`, testnet only):
+Kuru v1 has no testnet market (and Agora's testnet AUSD faucet was empty until 2026-09-30), so testnet also runs a **simulation stack**. The registry, vaults and adapters are the unchanged production contracts. Only the venues and tokens are stand-ins (`contracts/src/sim/`, testnet only):
 
 - **`SimPerplExchange`** speaks the Perpl Exchange ABI and trades at live prices read from the real Perpl testnet Exchange.
 - **`SimKuruOrderBook`** speaks the Kuru v1 OrderBook ABI and is centred on the Perpl MON mark.
