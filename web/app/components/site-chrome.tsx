@@ -48,18 +48,20 @@ export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { c
     <header className="sticky top-3 z-50 mt-3 -mb-[68px] px-3">
       <nav
         aria-label="Main"
-        className="mx-auto flex h-14 max-w-5xl items-center justify-between rounded-xl bg-night/85 pr-2 pl-4 text-paper shadow-card ring-1 ring-white/10 backdrop-blur-md"
+        className="mx-auto flex h-14 max-w-5xl items-center justify-between rounded-xl bg-night/85 pr-2 pl-4 text-paper shadow-card ring-1 ring-white/10 backdrop-blur-md sm:grid sm:grid-cols-[1fr_auto_1fr]"
       >
-        <a href="/" aria-label="Proofbook home" className="rounded-sm">
+        <a href="/" aria-label="Proofbook home" className="justify-self-start rounded-sm">
           <Wordmark />
         </a>
-        <div className="flex items-center gap-1">
-          <a href="/leaderboard" className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
+        <div className="hidden items-center gap-1 sm:flex">
+          <a href="/leaderboard" className="px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper">
             Leaderboard
           </a>
-          <a href="/builders" className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
+          <a href="/builders" className="px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper">
             Builders
           </a>
+        </div>
+        <div className="flex items-center gap-1 justify-self-end">
           <a href={REPO_URL} className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
             GitHub
           </a>
