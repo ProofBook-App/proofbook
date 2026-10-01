@@ -3,6 +3,7 @@
 const HOUSE_AGENTS: Record<number, Record<string, { name: string }>> = {
   10143: {
     "1951": { name: "House agent 1" }, // PerplAdapter, AUSD vault 0x98e2…2B53 (README, Testnet)
+    "1976": { name: "CLI test agent" }, // ours: entered, traded and frozen by the CLI's testnet run (README, CLI)
   },
 };
 

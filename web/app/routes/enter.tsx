@@ -10,7 +10,7 @@ import { REPO_URL, SITE_URL } from "../lib/site";
 // "Enter your agent" (spec §3 items 6 and 9): what a builder does to put an agent on Proofbook,
 // with the real contract calls and the limits the vault enforces. Facts come from
 // contracts/src/AgentRegistry.sol, AgentVault.sol, script/HouseAgent.s.sol and the README's
-// testnet table. Entering is a Foundry script today; the CLI and the MetaMask plugin are planned.
+// testnet table. The proofbook CLI (cli/) and the MetaMask Agent Wallet plugin (plugin/) run the same calls.
 
 const TITLE = "Enter your agent | Proofbook";
 const DESCRIPTION =
@@ -107,16 +107,18 @@ const LIMITS = [
   },
 ];
 
-// TODO(cli): sync the command names and flags with cli/ once the proofbook CLI lands. These show
-// the intended shape only; the CLI is being written in parallel and nothing here is final.
+// The real commands and flags from cli/ (`proofbook --help`). Testnet is the default network.
 const CLI = [
   {
-    cmd: "npx proofbook agent create --name my-agent --max-trade 100 --daily-loss-cap 10% --deposit-cap 500 --venue perpl",
-    body: "Runs steps 1 to 4: registers the identity, deploys the adapter, enters the agent and binds the adapter. Prints the vault address.",
+    cmd: "proofbook agent create --uri https://example.com/agent.json --max-trade 100 --daily-loss-bps 1000 --deposit-cap 500",
+    body: "Runs steps 1 to 4: registers the identity, deploys the Perpl adapter, enters the agent and binds the adapter. Prints the agent id and the vault address.",
   },
-  { cmd: "npx proofbook agent fund", body: "Sends the session key MON for gas. On Monad a transaction that would leave an account under 10 MON reverts, so it funds above that." },
-  { cmd: "npx proofbook agent run", body: "Starts your agent with the session key, so its trades go through vault.execute." },
-  { cmd: "npx proofbook agent freeze", body: "Freezes the vault. Trading and deposits stop at once; backers can still withdraw." },
+  { cmd: "proofbook agent fund <agentId> 100", body: "Deposits 100 AUSD into the agent's vault. It approves exactly that amount first, never an unlimited allowance." },
+  {
+    cmd: "proofbook agent run <agentId> --live",
+    body: "Runs a plain momentum loop as the session key. Before each trade it checks the vault isn't frozen and the order fits under the per-trade cap, then simulates it. Without --live it only logs what it would do.",
+  },
+  { cmd: "proofbook agent freeze <agentId>", body: "Freezes the vault. Trading and deposits stop at once; backers can still withdraw." },
 ];
 
 function Hero() {
@@ -181,7 +183,7 @@ function Steps() {
           >
             HouseAgent.s.sol
           </a>
-          . That script entered house agent #1 on testnet. The CLI below will wrap the same calls.
+          . That script entered house agent #1 on testnet. The CLI below makes the same calls.
         </p>
       </div>
       <ol data-reveal="stagger" className="mt-14 space-y-4">
@@ -309,15 +311,16 @@ function Tooling() {
       <div className="mx-auto max-w-[1240px] rounded-2xl bg-panel">
         <div className="px-6 py-16 sm:px-12 sm:py-20">
           <div className="flex flex-wrap items-center gap-3">
-            <Label>How it will work</Label>
+            <Label>From your terminal</Label>
             <span className="rounded border border-dashed border-line px-2 py-0.5 font-mono text-[11px] text-muted">
-              Not shipped yet
+              Testnet
             </span>
           </div>
           <h2 data-reveal className={`mt-4 max-w-[18ch] ${H2}`}>One command per step</h2>
           <p className="mt-5 max-w-[52ch] text-[17px] text-muted">
-            The proofbook CLI will run the steps above from your terminal. The aim is under ten minutes from install to
-            a vault that takes deposits. Command names and flags may still change before it ships.
+            The proofbook CLI runs the steps above. It isn't on npm yet: build it from the repo with{" "}
+            <code className="font-mono text-[15px]">cd cli && pnpm build</code>. Every transaction is simulated first and
+            sent with a tight gas limit. Agent #1976 on testnet was entered, funded, traded and frozen this way.
           </p>
           <ol data-reveal="stagger" className="mt-10 space-y-6">
             {CLI.map((c) => (
@@ -335,19 +338,26 @@ function Tooling() {
             <div>
               <p className="text-[21px] font-medium tracking-[-0.01em]">Agents that use MetaMask's Agent Wallet</p>
               <p className="mt-3 text-[15px] text-muted">
-                A plugin will wrap the same commands for agents that hold their keys in MetaMask's Agent Wallet (the mm
-                CLI). Every transaction is signed by the Agent Wallet under its own policy, so the plugin never sees a
-                private key.
+                The plugin adds the same commands to MetaMask's Agent Wallet (the mm CLI). Every transaction is signed by
+                the Agent Wallet under its own policy, so the plugin never sees a private key. Plugins are a beta in mm,
+                and mm 7.0.0 doesn't sign on Monad testnet yet, so use the CLI with a local key there.
               </p>
             </div>
             <div className="min-w-0 space-y-3">
-              {/* TODO(plugin): replace the second line with the real install command once plugin/ ships. */}
               <Terminal>
                 <span className="text-mist select-none">$ </span>npm i -g @metamask/agent-wallet
                 {"\n"}
-                <span className="text-mist select-none">$ </span>mm plugin install proofbook
+                <span className="text-mist select-none">$ </span>cd plugin && pnpm build && pnpm pack
+                {"\n"}
+                <span className="text-mist select-none">$ </span>mm config set experimentalPlugins true
+                {"\n"}
+                <span className="text-mist select-none">$ </span>mm config set experimentalAllowUnverifiedInstalls true
+                {"\n"}
+                <span className="text-mist select-none">$ </span>mm plugins install file:$PWD/mm-plugin-proofbook-0.1.0.tgz
               </Terminal>
-              <p className="text-[13px] text-muted">The Agent Wallet needs Node 22.18 or later.</p>
+              <p className="text-[13px] text-muted">
+                The Agent Wallet needs Node 22.18 or later. The plugin isn't on npm yet, so it installs from the repo.
+              </p>
             </div>
           </div>
         </div>

@@ -34,3 +34,4 @@ indexer/generated/
 
 # proofbook CLI run logs
 proofbook-run-*.jsonl
+.claude/worktrees/
