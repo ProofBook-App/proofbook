@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -14,7 +15,13 @@ import { REPO_URL, SITE_URL } from "./lib/site";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "manifest", href: "/manifest.webmanifest" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
 ];
+
+// Chrome and Android fire beforeinstallprompt once, often before hydration. Keep it for the
+// "Install app" button (components/install-app.client.tsx) and tell the button it arrived.
+const captureInstall = `addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__pbInstall=e;dispatchEvent(new Event("pb:install"))})`;
 
 // TODO: add the X account and the hackathon submission to sameAs once they exist.
 const jsonLd = [
@@ -34,13 +41,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#eed9b9" />
+        {/* Night, to match the manifest and the strip behind the iOS status bar (app.css). */}
+        <meta name="theme-color" content="#141a26" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Proofbook" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <Meta />
         <Links />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <script dangerouslySetInnerHTML={{ __html: captureInstall }} />
       </head>
       <body>
         {children}
@@ -53,6 +66,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // The service worker caches static files only (public/sw.js). Dev skips it so Vite's modules
+  // are never served stale.
+  useEffect(() => {
+    if (import.meta.env.PROD && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
   return <Outlet />;
 }
 

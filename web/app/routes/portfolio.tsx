@@ -41,7 +41,7 @@ export default function Portfolio({ loaderData: d }: Route.ComponentProps) {
           <PortfolioHero />
         )}
       </main>
-      <Footer />
+      <Footer install={false} />
     </>
   );
 }

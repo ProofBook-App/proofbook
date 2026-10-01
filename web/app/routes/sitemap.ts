@@ -2,7 +2,7 @@ import type { Route } from "./+types/sitemap";
 import { SITE_URL } from "../lib/site";
 
 // Public pages only: the static ones plus every agent profile in the D1 snapshot.
-const PATHS = ["/", "/leaderboard", "/builders"];
+const PATHS = ["/", "/leaderboard", "/builders", "/enter"];
 
 export async function loader({ context }: Route.LoaderArgs) {
   const env = context.cloudflare.env;

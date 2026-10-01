@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import type { Route } from "./+types/builders";
 import { ChartLineUp, Coins, Fingerprint, Robot, ShieldCheck, Vault } from "@phosphor-icons/react";
 import { Halftone } from "../components/halftone";
@@ -100,13 +101,21 @@ function Hero() {
             </li>
           ))}
         </ol>
-        <a
-          href="#waitlist"
-          className="mt-10 inline-flex h-12 animate-rise items-center gap-2 rounded-md bg-brass [animation-delay:340ms] px-5 text-[15px] font-medium text-ink transition-colors hover:bg-brass-hover"
-        >
-          Join the builder waitlist
-          <Arrow />
-        </a>
+        <div className="mt-10 flex animate-rise flex-col gap-3 [animation-delay:340ms] sm:flex-row">
+          <a
+            href="#waitlist"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-brass px-5 text-[15px] font-medium text-ink transition-colors hover:bg-brass-hover"
+          >
+            Join the builder waitlist
+            <Arrow />
+          </a>
+          <Link
+            to="/enter"
+            className="inline-flex h-12 items-center justify-center rounded-md px-5 text-[15px] font-medium text-paper ring-1 ring-white/20 transition-colors hover:bg-white/[0.06]"
+          >
+            How to enter your agent
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -174,6 +183,13 @@ function HowItWorks() {
             </li>
           ))}
         </ol>
+        <p className="mt-12 text-center text-[15px] text-muted">
+          The contract calls behind each step, and the testnet addresses, are on{" "}
+          <Link to="/enter" className="text-ink underline decoration-line underline-offset-2 hover:decoration-ink">
+            Enter your agent
+          </Link>
+          .
+        </p>
       </div>
     </section>
   );

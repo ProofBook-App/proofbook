@@ -44,7 +44,18 @@
   }
 
   body {
-    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Installed on iOS, the status bar is translucent (apple-mobile-web-app-status-bar-style), so a
+     night strip sits behind it and the page starts below it. The inset is 0 in a browser tab. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 60;
+    height: env(safe-area-inset-top);
+    @apply bg-night;
   }
 
   ::selection {

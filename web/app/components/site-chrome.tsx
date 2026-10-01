@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router";
 import { Mark } from "./halftone";
+import { InstallApp } from "./install-app";
 import { Arrow } from "./waitlist-form";
 import { REPO_URL } from "../lib/site";
 
@@ -45,18 +46,21 @@ export function AnnouncementBar() {
 }
 
 // In-app links use <Link>, so moving between pages keeps the backer's unlocked session in memory.
+// `short` is the phone tab bar's label, where four tabs share 375 px.
 const APP_LINKS = [
-  { label: "Leaderboard", to: "/leaderboard" },
-  { label: "Portfolio", to: "/portfolio" },
-  { label: "Builders", to: "/builders" },
+  { label: "Leaderboard", short: "Leaderboard", to: "/leaderboard" },
+  { label: "Portfolio", short: "Portfolio", to: "/portfolio" },
+  { label: "Builders", short: "Builders", to: "/builders" },
+  { label: "Enter your agent", short: "Enter", to: "/enter" },
 ];
 
 export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { cta?: { label: string; href: string } }) {
   const ctaClass =
-    "inline-flex h-10 items-center gap-2 rounded-lg bg-brass px-4 text-[14px] font-medium text-ink transition-colors hover:bg-brass-hover";
+    "inline-flex h-10 items-center gap-2 rounded-lg bg-brass px-4 text-[14px] whitespace-nowrap font-medium text-ink transition-colors hover:bg-brass-hover";
   return (
     <>
-      <header className="sticky top-3 z-50 mt-3 -mb-[68px] px-3">
+      {/* The safe-area offset keeps the pill below the iOS status bar in the installed app. */}
+      <header className="sticky top-[calc(0.75rem+env(safe-area-inset-top))] z-50 mt-3 -mb-[68px] px-3">
         <nav
           aria-label="Main"
           className="mx-auto flex h-14 max-w-5xl items-center justify-between rounded-xl bg-night/85 pr-2 pl-4 text-paper shadow-card ring-1 ring-white/10 backdrop-blur-md sm:grid sm:grid-cols-[1fr_auto_1fr]"
@@ -69,14 +73,15 @@ export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { c
               <NavLink
                 key={l.to}
                 to={l.to}
-                className={({ isActive }) => `px-3 py-2 text-[14px] transition-colors hover:text-paper ${isActive ? "text-paper" : "text-mist"}`}
+                className={({ isActive }) => `px-2 py-2 text-[14px] whitespace-nowrap transition-colors lg:px-3 hover:text-paper ${isActive ? "text-paper" : "text-mist"}`}
               >
-                {l.label}
+                <span className="lg:hidden">{l.short}</span>
+                <span className="hidden lg:inline">{l.label}</span>
               </NavLink>
             ))}
           </div>
           <div className="flex items-center gap-1 justify-self-end">
-            <a href={REPO_URL} className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
+            <a href={REPO_URL} className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper lg:block">
               GitHub
             </a>
             {cta.href.startsWith("/") ? (
@@ -105,16 +110,16 @@ function TabBar() {
         aria-label="Sections"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-night/95 pb-[env(safe-area-inset-bottom)] text-paper backdrop-blur-md sm:hidden"
       >
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-4">
           {APP_LINKS.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
               className={({ isActive }) =>
-                `flex min-h-14 items-center justify-center text-[13px] font-medium transition-colors ${isActive ? "text-brass" : "text-mist hover:text-paper"}`
+                `flex min-h-14 items-center justify-center px-1 text-[13px] font-medium transition-colors ${isActive ? "text-brass" : "text-mist hover:text-paper"}`
               }
             >
-              {l.label}
+              {l.short}
             </NavLink>
           ))}
         </div>
@@ -122,7 +127,14 @@ function TabBar() {
   );
 }
 
-export function Footer({ notes }: { notes?: { n: number; text: string; href: string }[] }) {
+export function Footer({
+  notes,
+  install = true,
+}: {
+  notes?: { n: number; text: string; href: string }[];
+  /** Off on pages that already show the install button higher up. */
+  install?: boolean;
+}) {
   const cols: { head: string; links: { label: string; href?: string }[] }[] = [
     {
       head: "Product",
@@ -131,6 +143,7 @@ export function Footer({ notes }: { notes?: { n: number; text: string; href: str
         { label: "Leaderboard", href: "/leaderboard" },
         { label: "Portfolio", href: "/portfolio" },
         { label: "Builders", href: "/builders" },
+        { label: "Enter your agent", href: "/enter" },
         { label: "Waitlist", href: "/#join" },
       ],
     },
@@ -152,6 +165,7 @@ export function Footer({ notes }: { notes?: { n: number; text: string; href: str
             <Wordmark />
             <p className="mt-4 text-[15px]">AI trading agents. Proven in public.</p>
             <p className="mt-1 text-[15px] text-muted">Built on Monad.</p>
+            {install && <InstallApp className="mt-6" />}
           </div>
           {cols.map((c) => (
             <div key={c.head}>
