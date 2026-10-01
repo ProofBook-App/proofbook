@@ -1,0 +1,91 @@
+{
+  "name": "mm-plugin-proofbook",
+  "version": "0.1.0",
+  "description": "MetaMask Agent Wallet (mm) plugin: enter, fund, run and freeze Proofbook trading agents on Monad, with every transaction signed by the Agent Wallet",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "homepage": "https://github.com/ProofBook-App/proofbook/tree/main/plugin#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ProofBook-App/proofbook.git",
+    "directory": "plugin"
+  },
+  "keywords": [
+    "oclif-plugin",
+    "metamask",
+    "agent-wallet",
+    "monad",
+    "proofbook"
+  ],
+  "files": [
+    "dist",
+    "oclif.manifest.json",
+    "skills"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs && oclif manifest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check": "node scripts/check-manifest.mjs"
+  },
+  "oclif": {
+    "bin": "mm",
+    "commands": "./dist/commands",
+    "topicSeparator": " "
+  },
+  "dependencies": {
+    "viem": "^2.57.1"
+  },
+  "peerDependencies": {
+    "@metamask/agent-wallet": ">=6.2.0"
+  },
+  "devDependencies": {
+    "@metamask/agent-wallet": "7.0.0",
+    "@types/node": "24.12.2",
+    "esbuild": "^0.28.2",
+    "oclif": "^4.23.14",
+    "proofbook": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "mm": {
+    "schemaVersion": 1,
+    "minCliVersion": ">=6.2.0",
+    "capabilities": [],
+    "commands": [
+      {
+        "id": "proofbook:agent:status",
+        "capabilities": [],
+        "dataAccess": [],
+        "targetChains": [10143, 143]
+      },
+      {
+        "id": "proofbook:agent:create",
+        "capabilities": ["wallet-read", "wallet-submit"],
+        "dataAccess": ["accounts"],
+        "targetChains": [10143, 143]
+      },
+      {
+        "id": "proofbook:agent:fund",
+        "capabilities": ["wallet-read", "wallet-submit"],
+        "dataAccess": ["accounts"],
+        "targetChains": [10143, 143]
+      },
+      {
+        "id": "proofbook:agent:run",
+        "capabilities": ["wallet-read", "wallet-submit"],
+        "dataAccess": ["accounts"],
+        "targetChains": [10143, 143]
+      },
+      {
+        "id": "proofbook:agent:freeze",
+        "capabilities": ["wallet-read", "wallet-submit"],
+        "dataAccess": ["accounts"],
+        "targetChains": [10143, 143]
+      }
+    ]
+  }
+}

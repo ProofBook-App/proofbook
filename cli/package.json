@@ -1,0 +1,37 @@
+{
+  "name": "proofbook",
+  "version": "0.1.0",
+  "description": "Enter, fund, run and freeze Proofbook trading agents on Monad",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "proofbook": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "artifacts": "node scripts/artifacts.mjs",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "viem": "^2.57.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.12.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

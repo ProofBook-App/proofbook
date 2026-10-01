@@ -86,6 +86,55 @@ The "Back this agent" panel on every `/agent/:id` page runs in the browser only 
 - **Test funds (testnet only):** `POST /api/drip` sends a new account 0.5 test MON for gas and asks Agora's faucet for 10,000 test AUSD (`web/app/lib/drip.server.ts`). MON and AUSD are limited separately to one each per account per day, plus five requests per IP. Agora's faucet allows one claim a minute across everyone, so when it's busy the drip sends AUSD from its own stock instead. The per-minute cron keeps that stock at 30,000 AUSD. The drip is off unless the `DRIP_PK` secret is set, and it refuses on any chain but 10143.
 - **Check it:** `cd web && FLOW_TEST_KEY_FILE=<file holding a throwaway testnet key with ~0.3 MON> npx tsx scripts/flow-test.ts` runs faucet, approve, deposit, withdraw and redeem through the same session code against house agent #1's vault, and checks that out-of-scope calls are refused. First run 2026-09-30: approve, deposit 25 AUSD, withdraw 5 (`0x4b2a844e94fa623fa0520a37f9f3087e670363e964e5d1addaf7c9f02ccb996b`), redeem the rest (`0x364cefb00ce12ed7779f4e5c339cb2aad32e4760b99100af816ef26a9082c575`). Five transactions cost about 0.15 test MON.
 
+### CLI (`cli/`)
+
+`proofbook agent create|fund|run|freeze|status` (plus `chains` and a testnet `faucet`) enters, backs, trades and freezes agents from a terminal. It is TypeScript on viem, with `node:util` `parseArgs` for flags. Results print as JSON on stdout and progress goes to stderr.
+
+```bash
+pnpm install && pnpm --filter proofbook build
+node cli/dist/cli.js agent status 1951                          # read-only
+PROOFBOOK_PK_FILE=<throwaway key file> node cli/dist/cli.js faucet --signer env              # 10,000 test AUSD
+PROOFBOOK_PK_FILE=... node cli/dist/cli.js agent create --signer env --uri <agentURI> --max-trade 100 --daily-loss-bps 1000 --deposit-cap 200
+PROOFBOOK_PK_FILE=... node cli/dist/cli.js agent fund <id> 5 --signer env
+node cli/dist/cli.js agent run <id>                              # dry run: decide, check, simulate, log
+PROOFBOOK_PK_FILE=... node cli/dist/cli.js agent run <id> --live --signer env [--once | --interval 60] [--action deposit|long|close]
+PROOFBOOK_PK_FILE=... node cli/dist/cli.js agent freeze <id> --signer env
+```
+
+- **Networks:** testnet (10143) by default. Mainnet (143) only with `--network mainnet`, and it refuses until a mainnet registry exists.
+- **Signers:** `--signer mm` (the default) sends every transaction through `mm wallet send-transaction`, so the CLI holds no key. `--signer env` reads `PROOFBOOK_PK` or `PROOFBOOK_PK_FILE`, for local development only.
+- **Every transaction** is simulated with `eth_call` first (reverts are decoded and nothing is sent), then sent with an explicit gas limit of estimate + 5%. `fund` approves exactly the deposit. Decimals are read from the token.
+- **`create`** follows `script/HouseAgent.s.sol`: register the ERC-8004 identity, deploy a `PerplAdapter` (creation bytecode embedded from the Foundry build by `pnpm --filter proofbook artifacts`), `enter` with the risk envelope, `bind`. `--agent-id` and `--adapter` resume a partial run.
+- **`run`** is a plain momentum agent on Perpl's MON mark (1x, long-only). With no Perpl account it moves margin in first. It opens a long when the mark rises past `--threshold-bps` since the last step and closes it when the mark falls by as much; otherwise it holds. Before signing it checks the vault isn't frozen, the signer is the session key, the adapter's own `quoteNotional` fits `maxTradeNotional`, and an `eth_call` of `vault.execute` succeeds. Every step (observation, decision, reason, checks, tx hash) is appended to `proofbook-run-<id>.jsonl`. It is a dry run unless `--live`, and it stops when the vault is frozen. No LLM yet.
+- **Tests:** `pnpm --filter proofbook test` checks the encoding offline (adapter payloads, order fields, the 3% price band, network selection).
+
+**Verified on testnet, 2026-10-02**, with the `env` signer and a throwaway key (funded with 1 MON from the deployer: `0x3aa9ffc02e3e7d978478d7289feaefcf8450aacab881dafe464877e5c38cacde`):
+
+| Command | Tx |
+|---|---|
+| `faucet`: 10,000 test AUSD | `0x0a7bee52eba90d9ed912fbd2ddc3e605a78e2881408f853798d3c67708917ee6` |
+| `agent fund 1951 5`: approve exactly 5 AUSD | `0x79a964ffd5093de64e8217eb2b52fe62472b99e562fc8446d9cc883fb7e25022` |
+| `agent fund 1951 5`: deposit into house agent #1's vault | `0x2868261e97e3c2858ad7b6ee129d9ed2e6c707d6cbdc8842807b8f8abac4b357` |
+| `agent create`: register ERC-8004 identity #1976 | `0x57e1361de28229ec958fb2c41a74e46d55933b767bb40c5bde32423db592e8cf` |
+| `agent create`: deploy PerplAdapter `0x0ba52D06F70DbB75624c9E7986E03E3e5a27dd91` | `0x0764abaf254ccea387825dc477d739140fead86f67e6fbdf0097f687801b368d` |
+| `agent create`: `enter`, vault `0xD43cF67435a753F37BE3aCfD8Ed866A5a1D92508` ($100 max trade, 10% daily loss, $200 per backer) | `0x38aac92c509c2798a81c88b0f80d49fc474b8889ea96f17cbc8af9f6a3cfa707` |
+| `agent create`: `bind` | `0x567c3be230d521cb590186fcb52fc130d8db50ff40bed67f45740a08c474ea98` |
+| `agent fund 1976 150`: approve, deposit | `0xed502a92772421d294f51f884e82a4dd45e8477d529e253561bb55beea2bc3fe`, `0x5ca78380e8dea2b83ad30cfdd98524f7b1601347b669c3539681fc7a8074434f` |
+| `agent run 1976 --live --once`: no Perpl account, so 100 AUSD margin in (opens Perpl account #751) | `0x313177e750659790d74167e878a28b67231a32d6e5f7e1262c0bfec5272276ac` |
+| `agent run 1976 --live --action long --size 10`: 297-lot MON long (notional 10.03 AUSD) | `0x13d29e41c3f75489f3150c992107922c8b1ea8a98fa6504f80516ed1ce86cd38` |
+| `agent run 1976 --live --action close`: close the long | `0x288f0985dba10fcb04bc25450011eed1d277800e1ed5998af9373d4ad12b8829` |
+| `agent freeze 1976` (owner) | `0xe3feab7eea608f46dd7c6d16e096a0bd23d2289ec80c4b12fb36cc00b0b7dc7e` |
+
+Agent #1976 is a CLI test agent, not a house agent; its vault is frozen with NAV 149.98 AUSD (50 idle, 99.98 as free Perpl margin, which anyone can `recall` to the frozen vault). A `run` against it now stops with "vault is frozen". A dry `run --action long --size 500` against #1951 is rejected before signing (notional 502.5 over the 100 cap). Creating an agent cost about 0.51 test MON, almost all of it the adapter and vault deployments.
+
+**`--signer mm` on testnet does not work with mm 7.0.0.** MetaMask's hosted RPC answers `Invalid chainId` for 10143: first in gas-fee estimation, and when the CLI supplies the fees itself, in mm's block tracker, which then polls forever past `--wallet-timeout`. No request reaches the wallet (none pending, the wallet's testnet nonce is still 0). The CLI now stops mm as soon as it logs that error and says nothing was signed. Monad mainnet is supported by mm, so the mm path is for mainnet once the registry is deployed there.
+
+### MetaMask Agent Wallet plugin (`plugin/`)
+
+`mm-plugin-proofbook` adds `mm proofbook agent create|fund|run|freeze|status` to the `mm` CLI through the Agent Wallet's plugin system (beta, mm 6.2.0+). Each command extends `PluginCommand` from `@metamask/agent-wallet/plugin` and signs with `ctx.walletExecutor`, the executor behind `mm wallet send-transaction`, so MetaMask's policy, Guard mode and 2FA apply and the plugin never sees a key, the session token or the SRP. The write commands declare `wallet-submit` in `package.json#mm` and get the executor only after the user approves the consent screen. `skills/proofbook/SKILL.md` tells an AI agent how to install it and drive it: confirmation rules, 2FA, the testnet limits, errors. See [plugin/README.md](plugin/README.md) for install steps, known gaps and a 5-minute demo script.
+
+Known gaps: the Agent Wallet only sends transactions with a `to` address, so `create` cannot deploy the per-vault PerplAdapter through it (it stops before sending anything); an adapter factory in the contracts would close that. And the plugin has not been installed into a live `mm` yet, because that needs the wallet owner to turn on the plugin beta and accept the consent screen. `pnpm --filter mm-plugin-proofbook check` runs the same manifest, id, version and base-class checks mm runs at install.
+
 ### Testnet simulation stack (10143, retired 2026-09-30)
 
 > **Not used any more.** Testnet runs on the real Perpl testnet through registry `0x25D4…8ABC` and house agent #1 (above). Kuru is not tested on testnet (Kuru v1 has no testnet market); it is covered by the mainnet-fork suite. The sim contracts stay in `src/sim/` because the CI tests use them. The sim Kuru book's 9 MON was withdrawn back to the deployer (`0x172c3829574e382832f10e48518aa15a9d56b7486bcfb1b3f800f12c09018537`). The history below is kept for the record.
