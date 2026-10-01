@@ -24,7 +24,7 @@ Domain: `proofbook.app` (Cloudflare Registrar, served by the web Worker). GitHub
 - `docs/brand/voice.md`: how we write (banned AI-writing patterns). `docs/brand/research.md`: sourced figures, and only those marked verified go on the site. `web/DESIGN.md`: colour, type, layout. `PRODUCT.md`: product record for design work. Read them before writing copy or UI.
 - `.claude/rules/`: per-package rules that load automatically when working in `contracts/`, `indexer/`, `web/`, `agents|cli|plugin/`
 
-Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`), `indexer/` and `web/`.
+Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`), `indexer/`, `web/`, `cli/` (the `proofbook` CLI, also the library the plugin bundles) and `plugin/` (`mm-plugin-proofbook`, the MetaMask Agent Wallet plugin and its `skills/proofbook/SKILL.md`).
 
 ## Commands
 
@@ -42,6 +42,11 @@ cd indexer && pnpm abis                                 # after changing contrac
 cd web && pnpm dev                                      # /api/leaderboard, /api/agent/:id; first request fills local D1 from the indexer
 cd web && npx wrangler d1 migrations apply proofbook --local   # after adding web/migrations/*.sql (--remote for production)
 cd web && FLOW_TEST_KEY_FILE=... npx tsx scripts/flow-test.ts  # testnet deposit/withdraw through the backer session code (throwaway key, ~0.3 MON)
+pnpm --filter proofbook build && node cli/dist/cli.js --help   # CLI: agent create|fund|run|freeze|status, chains, faucet (testnet default)
+PROOFBOOK_PK_FILE=... node cli/dist/cli.js agent fund <id> 5 --signer env   # env signer for testnet; --signer mm (default) goes through `mm`
+pnpm --filter proofbook test                            # offline encoding tests (build first)
+pnpm --filter proofbook artifacts                       # after changing PerplAdapter: forge build, then this (embeds its creation bytecode)
+pnpm --filter mm-plugin-proofbook build && pnpm --filter mm-plugin-proofbook check   # mm plugin bundle + install-time manifest checks
 ```
 
 ## Invariants (spec §6): never violate, tests first

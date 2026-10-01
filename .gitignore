@@ -31,3 +31,6 @@ indexer/generated/
 
 # Local spikes (contain UNLICENSED third-party interfaces)
 .spikes/
+
+# proofbook CLI run logs
+proofbook-run-*.jsonl

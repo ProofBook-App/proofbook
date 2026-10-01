@@ -12,6 +12,15 @@
 
 46 chains in the live list. It is server-driven, so recheck before the demo.
 
+**Monad testnet does not sign (firsthand, 2026-10-02, mm 7.0.0).** `mm wallet send-transaction --chain-id 10143` fails in gas-fee estimation with `Non-200 status code: '400'`, `{ error: 'Invalid chainId' }` from MetaMask's API. With `maxFeePerGas`/`maxPriorityFeePerGas` in the payload it gets past that, but its `PollingBlockTracker` hits the same `Invalid chainId` and polls forever, ignoring `--wallet-timeout`. `mm wallet requests list` stays empty and the wallet's testnet nonce stays 0, so nothing reaches the wallet. Also: the payload requires `to` (`MISSING_TO`), so mm cannot send a contract creation.
+
+## Plugins (firsthand, 2026-10-02)
+
+- The plugin system arrived in 6.2.0 (CHANGELOG "Plugin system"; beta, off by default: `mm config set experimentalPlugins true`). A plugin is an npm package with oclif commands that extend `PluginCommand` from `@metamask/agent-wallet/plugin`, plus a `package.json#mm` manifest (`schemaVersion: 1`, `minCliVersion`, per-command `capabilities` from `wallet-read`, `wallet-submit`, `network-manage`, `dataAccess`, `targetChains`). It must ship `oclif.manifest.json` and may not declare oclif hooks or plugins.
+- `mm plugins install <pkg>` shows a consent screen; local sources (`file:`, paths, git) also need `experimentalAllowUnverifiedInstalls`. Approvals live in `~/.metamask/config.json`.
+- `wallet-submit` gives `ctx.walletExecutor(io, commandId)`, which `mm wallet send-transaction` itself uses: `exec({ kind: "transaction", chainId, transaction: { to, data, value, gas, … }, intent: { action: "custom", summary } }, { signal })` returns `{ hash, status, failureDescription, pendingJob }`. Plugins never get the session token or the SRP.
+- Sources: the installed package (`dist/plugin-sdk/index.d.ts`, `dist/runtime/plugins/*.d.ts`, CHANGELOG), github.com/MetaMask/agent-skills `skills/metamask-agent-wallet/references/plugins.md`, and the reference template github.com/hieu-w/agent-wallet-plugin-template (linked from the CHANGELOG). Ours is `plugin/`.
+
 ## Our setup (2026-09-29)
 
 - `mm login` → `mm init`: **Server Wallet** (keys held server-side), **Guard mode**. Transactions outside policy (non-allowlisted network, address or recipient, raising the rolling-24h outflow limit) need the human's 2FA approval.
