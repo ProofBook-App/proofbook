@@ -1,27 +1,27 @@
 // Deposit and withdraw on an agent's vault, with a Mera passkey account. Browser only: the agent page
 // mounts it after hydration. One passkey prompt creates or unlocks the account and starts a
-// 15-minute signing session scoped to this vault; inside it, approve, deposit and withdraw sign
+// 15-minute signing session scoped to the agent vaults (lib/account.client.ts holds it for the tab,
+// so the portfolio and other agent pages share it); inside it, approve, deposit and withdraw sign
 // without prompts. Nothing secret is stored on the device.
 //
 // The panel on the page shows the position. The flow itself runs in a modal that picks up wherever
 // the backer is: no account → create or log in; locked → unlock; empty on testnet → test funds
-// (requested without a tap); then the amount, then a receipt. Any "#back" link opens it.
+// (requested without a tap); then the amount, then a receipt. Any "#back" link opens it, and the page
+// opens it on arrival at #deposit or #withdraw (the portfolio links there).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseUnits, type Address, type Hash } from "viem";
+import { Countdown, primary, quiet, secondary } from "./account-bits";
+import { accountAddress, forgetAccount, lockAccount, unlockAccount, useAccount } from "../lib/account.client";
 import {
   SESSION_MINUTES,
   TxFailed,
   assetDecimals,
   explain,
-  forgetDevice,
-  loadIdentity,
   readPosition,
-  unlock,
-  type Identity,
   type Position,
-  type Scope,
   type Session,
+  type VaultRef,
 } from "../lib/backer.client";
 import { txUrl } from "../lib/chains";
 import { formatUnits, shortAddress } from "../lib/format";
@@ -39,17 +39,10 @@ type Mode = "deposit" | "withdraw";
 type Receipt = { label: string; hash: Hash; ok: boolean };
 type Done = { mode: Mode; amount: bigint; hash: Hash };
 
-const btn =
-  "inline-flex min-h-12 items-center justify-center gap-2 rounded-md px-5 text-[15px] font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50";
-const primary = `${btn} bg-brass text-ink hover:bg-brass-hover`;
-const secondary = `${btn} bg-panel text-ink ring-1 ring-line hover:bg-panel-2`;
-const quiet = "min-h-11 px-2 text-[14px] text-muted underline decoration-current/30 underline-offset-2 hover:text-ink";
-
 export default function BackPanel(props: BackPanelProps) {
-  const scope: Scope = { chainId: props.chainId, vault: props.vault as Address, asset: props.asset as Address };
-  const [identity, setIdentity] = useState<Identity | undefined>(() => loadIdentity());
-  const [session, setSession] = useState<Session | null>(null);
-  const [ended, setEnded] = useState<string | null>(null);
+  const ref: VaultRef = { vault: props.vault as Address, asset: props.asset as Address };
+  const account = useAccount();
+  const { session, ended } = account;
   const [position, setPosition] = useState<Position | null>(null);
   const [decimals, setDecimals] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -61,19 +54,19 @@ export default function BackPanel(props: BackPanelProps) {
   const [done, setDone] = useState<Done | null>(null);
   const started = useRef<{ at: number; taps: number } | null>(null);
   const dripTried = useRef<Session | null>(null);
-  const address = session?.address ?? identity?.address;
+  const address = accountAddress(account);
 
   const refresh = useCallback(async () => {
     if (!address) return;
     try {
-      setPosition(await readPosition(scope, address));
+      setPosition(await readPosition(props.chainId, ref, address));
     } catch {
       // A slow RPC just leaves the last figures up; the next refresh tries again.
     }
   }, [address, props.vault]);
 
   useEffect(() => {
-    assetDecimals(scope).then(setDecimals, () => setDecimals(6));
+    assetDecimals(props.chainId, ref.asset).then(setDecimals, () => setDecimals(6));
   }, [props.asset]);
 
   useEffect(() => {
@@ -82,8 +75,17 @@ export default function BackPanel(props: BackPanelProps) {
     return () => clearInterval(t);
   }, [refresh]);
 
-  // Lock when the page goes away, so the key doesn't outlive the tab's view of it.
-  useEffect(() => () => session?.end("You left the page"), [session]);
+  useEffect(() => {
+    if (!address) setPosition(null);
+  }, [address]);
+
+  // Arriving at #deposit or #withdraw (from the portfolio) opens the flow there.
+  useEffect(() => {
+    const m = location.hash.slice(1);
+    if (m !== "deposit" && m !== "withdraw") return;
+    history.replaceState(null, "", location.pathname + location.search);
+    openFlow(m);
+  }, []);
 
   // "Back this agent" in the nav (and any other #back link) opens the flow instead of scrolling.
   useEffect(() => {
@@ -126,15 +128,9 @@ export default function BackPanel(props: BackPanelProps) {
   async function begin(how: "create" | "login") {
     tap();
     setError(null);
-    setEnded(null);
     setBusy(how === "create" ? "Creating your account. Confirm with your passkey…" : "Waiting for your passkey…");
     try {
-      const s = await unlock(how, scope, (reason) => {
-        setSession(null);
-        setEnded(reason);
-      });
-      setSession(s);
-      setIdentity(loadIdentity());
+      await unlockAccount(how, props.chainId, [ref]);
     } catch (e) {
       setError(explain(e));
     } finally {
@@ -223,7 +219,8 @@ export default function BackPanel(props: BackPanelProps) {
             <Step title="Unlock your account">
               <p className="text-[15px] text-muted">
                 One passkey prompt unlocks <span className="font-mono text-ink">{shortAddress(address)}</span> for{" "}
-                {SESSION_MINUTES} minutes, for approve, deposit and withdraw on this vault only.
+                {SESSION_MINUTES} minutes, across every page here. It can only approve, deposit and withdraw on Proofbook agent
+                vaults, to and from your own account.
               </p>
               <button className={`${primary} mt-5 w-full`} disabled={!!busy} onClick={() => begin("login")}>
                 Unlock for {SESSION_MINUTES} minutes
@@ -324,8 +321,8 @@ export default function BackPanel(props: BackPanelProps) {
                 }
                 onSubmit={(amount) =>
                   run("deposit", amount, [
-                    ...(p.allowance < amount ? [{ label: "Approve", send: () => session.approve(amount) }] : []),
-                    { label: "Deposit", send: () => session.deposit(amount) },
+                    ...(p.allowance < amount ? [{ label: "Approve", send: () => session.approve(ref, amount) }] : []),
+                    { label: "Deposit", send: () => session.deposit(ref, amount) },
                   ])
                 }
               />
@@ -345,8 +342,8 @@ export default function BackPanel(props: BackPanelProps) {
                 onSubmit={(amount) =>
                   run("withdraw", amount, [
                     amount === p.maxWithdraw && p.maxWithdraw >= p.value
-                      ? { label: "Withdraw", send: () => session.redeemAll() }
-                      : { label: "Withdraw", send: () => session.withdraw(amount) },
+                      ? { label: "Withdraw", send: () => session.redeemAll(ref) }
+                      : { label: "Withdraw", send: () => session.withdraw(ref, amount) },
                   ])
                 }
               />
@@ -358,7 +355,7 @@ export default function BackPanel(props: BackPanelProps) {
       {session && (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 border-t border-line pt-3">
           <Countdown session={session} />
-          <button className={quiet} onClick={() => session.end()}>
+          <button className={quiet} onClick={lockAccount}>
             Lock now
           </button>
         </div>
@@ -403,17 +400,13 @@ export default function BackPanel(props: BackPanelProps) {
           Withdraw
         </button>
         {session ? (
-          <button className={quiet} onClick={() => session.end()}>
+          <button className={quiet} onClick={lockAccount}>
             Lock now
           </button>
         ) : (
           <button
             className={quiet}
-            onClick={() => {
-              forgetDevice();
-              setIdentity(undefined);
-              setPosition(null);
-            }}
+            onClick={forgetAccount}
           >
             Forget this device
           </button>
@@ -512,20 +505,6 @@ function Status({ busy, error }: { busy: string | null; error: string | null }) 
   if (busy) return <p role="status" className="mt-4 text-[14px] text-muted">{busy}</p>;
   if (error) return <p role="alert" className="mt-4 rounded-lg bg-limit/10 px-4 py-3 text-[14px] text-limit">{error}</p>;
   return null;
-}
-
-function Countdown({ session }: { session: Session }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const left = Math.max(0, Math.ceil((session.expiresAt - now) / 1000));
-  return (
-    <p className="font-mono text-[13px] text-gain tabular-nums">
-      Unlocked, {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")} left
-    </p>
-  );
 }
 
 function AmountForm(props: {

@@ -1,9 +1,13 @@
 import {
   ACTIVITY_QUERY,
+  BACKER_QUERY,
+  TRADES_QUERY,
   gql,
   NAV_POINT_PAGE,
   SNAPSHOT_QUERY,
   type IndexedActivity,
+  type IndexedBacker,
+  type IndexedTrades,
   type SnapshotData,
 } from "./indexer.server";
 import { houseAgent } from "./agents";
@@ -342,4 +346,33 @@ export async function readActivity(env: SnapshotEnv, vault: string, limit = 20) 
   } catch {
     return null;
   }
+}
+
+// A backer's portfolio: every agent on the board (so the client can read its shares in each from the
+// chain), what the indexer knows about this account's deposits, and the open positions and latest
+// trades of the vaults it backs. `history` is null when the indexer can't be reached.
+export async function readBacker(env: SnapshotEnv, account: string, limit = 20) {
+  const board = await readLeaderboard(env);
+  let history: (IndexedBacker & IndexedTrades) | null = null;
+  try {
+    const mine = await gql<IndexedBacker>(env.ENVIO_GRAPHQL_URL, BACKER_QUERY, { account, limit }, 4000);
+    const vaults = mine.Backer.map((b) => b.vault_id);
+    const trades = vaults.length
+      ? await gql<IndexedTrades>(env.ENVIO_GRAPHQL_URL, TRADES_QUERY, { vaults, limit }, 4000)
+      : { Trade: [] };
+    history = { ...mine, ...trades };
+  } catch {
+    // Live balances still come from the chain.
+  }
+  const vaults = history?.Backer.map((b) => b.vault_id) ?? [];
+  const positions = vaults.length
+    ? (
+        await env.DB.prepare(
+          `SELECT * FROM positions WHERE chain_id = ?1 AND vault IN (${vaults.map((_, i) => `?${i + 2}`).join(",")}) ORDER BY id`,
+        )
+          .bind(board.chainId, ...vaults)
+          .all<PositionRow>()
+      ).results.map((r) => ({ vault: r.vault, ...toPosition(r) }))
+    : [];
+  return { ...board, account, history, positions };
 }

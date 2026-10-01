@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link, NavLink } from "react-router";
 import { Mark } from "./halftone";
 import { Arrow } from "./waitlist-form";
 import { REPO_URL } from "../lib/site";
@@ -43,38 +44,81 @@ export function AnnouncementBar() {
   );
 }
 
+// In-app links use <Link>, so moving between pages keeps the backer's unlocked session in memory.
+const APP_LINKS = [
+  { label: "Leaderboard", to: "/leaderboard" },
+  { label: "Portfolio", to: "/portfolio" },
+  { label: "Builders", to: "/builders" },
+];
+
 export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { cta?: { label: string; href: string } }) {
+  const ctaClass =
+    "inline-flex h-10 items-center gap-2 rounded-lg bg-brass px-4 text-[14px] font-medium text-ink transition-colors hover:bg-brass-hover";
   return (
-    <header className="sticky top-3 z-50 mt-3 -mb-[68px] px-3">
-      <nav
-        aria-label="Main"
-        className="mx-auto flex h-14 max-w-5xl items-center justify-between rounded-xl bg-night/85 pr-2 pl-4 text-paper shadow-card ring-1 ring-white/10 backdrop-blur-md sm:grid sm:grid-cols-[1fr_auto_1fr]"
+    <>
+      <header className="sticky top-3 z-50 mt-3 -mb-[68px] px-3">
+        <nav
+          aria-label="Main"
+          className="mx-auto flex h-14 max-w-5xl items-center justify-between rounded-xl bg-night/85 pr-2 pl-4 text-paper shadow-card ring-1 ring-white/10 backdrop-blur-md sm:grid sm:grid-cols-[1fr_auto_1fr]"
+        >
+          <Link to="/" aria-label="Proofbook home" className="justify-self-start rounded-sm">
+            <Wordmark />
+          </Link>
+          <div className="hidden items-center gap-1 sm:flex">
+            {APP_LINKS.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                className={({ isActive }) => `px-3 py-2 text-[14px] transition-colors hover:text-paper ${isActive ? "text-paper" : "text-mist"}`}
+              >
+                {l.label}
+              </NavLink>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 justify-self-end">
+            <a href={REPO_URL} className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
+              GitHub
+            </a>
+            {cta.href.startsWith("/") ? (
+              <Link to={cta.href} className={ctaClass}>
+                {cta.label}
+                <Arrow />
+              </Link>
+            ) : (
+              <a href={cta.href} className={ctaClass}>
+                {cta.label}
+                <Arrow />
+              </a>
+            )}
+          </div>
+        </nav>
+      </header>
+      <TabBar />
+    </>
+  );
+}
+
+// Phones get the app's sections as a bottom tab bar, since the top bar only has room for the CTA.
+function TabBar() {
+  return (
+    <nav
+        aria-label="Sections"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-night/95 pb-[env(safe-area-inset-bottom)] text-paper backdrop-blur-md sm:hidden"
       >
-        <a href="/" aria-label="Proofbook home" className="justify-self-start rounded-sm">
-          <Wordmark />
-        </a>
-        <div className="hidden items-center gap-1 sm:flex">
-          <a href="/leaderboard" className="px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper">
-            Leaderboard
-          </a>
-          <a href="/builders" className="px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper">
-            Builders
-          </a>
+        <div className="grid grid-cols-3">
+          {APP_LINKS.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className={({ isActive }) =>
+                `flex min-h-14 items-center justify-center text-[13px] font-medium transition-colors ${isActive ? "text-brass" : "text-mist hover:text-paper"}`
+              }
+            >
+              {l.label}
+            </NavLink>
+          ))}
         </div>
-        <div className="flex items-center gap-1 justify-self-end">
-          <a href={REPO_URL} className="hidden px-3 py-2 text-[14px] text-mist transition-colors hover:text-paper sm:block">
-            GitHub
-          </a>
-          <a
-            href={cta.href}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-brass px-4 text-[14px] font-medium text-ink transition-colors hover:bg-brass-hover"
-          >
-            {cta.label}
-            <Arrow />
-          </a>
-        </div>
-      </nav>
-    </header>
+    </nav>
   );
 }
 
@@ -85,6 +129,7 @@ export function Footer({ notes }: { notes?: { n: number; text: string; href: str
       links: [
         { label: "Agents" },
         { label: "Leaderboard", href: "/leaderboard" },
+        { label: "Portfolio", href: "/portfolio" },
         { label: "Builders", href: "/builders" },
         { label: "Waitlist", href: "/#join" },
       ],
@@ -99,7 +144,8 @@ export function Footer({ notes }: { notes?: { n: number; text: string; href: str
     },
   ];
   return (
-    <footer className="border-t border-dashed border-line">
+    // Bottom padding on phones keeps the footer clear of the tab bar.
+    <footer className="border-t border-dashed border-line pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
         <div className="grid gap-12 sm:grid-cols-[1.4fr_1fr_1fr]">
           <div>

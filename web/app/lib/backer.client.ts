@@ -1,4 +1,4 @@
-// Backer accounts: Mera passkeys, and a signing session scoped to backing one vault.
+// Backer accounts: Mera passkeys, and a signing session scoped to backing this chain's agent vaults.
 // Browser only. The `.client.ts` suffix keeps this module (Mera, @scure/*, viem signing) out of the
 // Worker: React Router replaces its exports with `undefined` during SSR, so only call it after
 // hydration. Spike findings: docs/reference/mera.md.
@@ -62,6 +62,7 @@ export const erc20Abi = parseAbi([
 export const vaultAbi = parseAbi([
   "function asset() view returns (address)",
   "function balanceOf(address) view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
   "function convertToAssets(uint256 shares) view returns (uint256)",
   "function maxDeposit(address receiver) view returns (uint256)",
   "function maxWithdraw(address owner) view returns (uint256)",
@@ -143,17 +144,18 @@ function rpId() {
 
 export const SESSION_MINUTES = 15;
 
-export type Scope = { chainId: number; vault: Address; asset: Address };
+export type VaultRef = { vault: Address; asset: Address };
+export type Scope = { chainId: number; vaults: VaultRef[] };
 
 export type Session = {
   address: Address;
   expiresAt: number;
   live(): boolean;
   end(reason?: string): void;
-  approve(amount: bigint): Promise<Hash>;
-  deposit(amount: bigint): Promise<Hash>;
-  withdraw(amount: bigint): Promise<Hash>;
-  redeemAll(): Promise<Hash>;
+  approve(vault: VaultRef, amount: bigint): Promise<Hash>;
+  deposit(vault: VaultRef, amount: bigint): Promise<Hash>;
+  withdraw(vault: VaultRef, amount: bigint): Promise<Hash>;
+  redeemAll(vault: VaultRef): Promise<Hash>;
   requestAusd(): Promise<Hash>;
 };
 
@@ -201,8 +203,9 @@ export function startSession(privateKey: Uint8Array, scope: Scope, onEnd: (reaso
   const wallet = createWalletClient({ account, chain, transport: http() });
   const client = publicClient(scope.chainId);
   const faucet = ausdFaucet(scope.chainId)?.toLowerCase();
-  const vault = scope.vault.toLowerCase();
-  const asset = scope.asset.toLowerCase();
+  // vault -> its asset, both lowercase
+  const vaults = new Map(scope.vaults.map((r) => [r.vault.toLowerCase(), r.asset.toLowerCase()]));
+  const assets = new Set(vaults.values());
   const self = address.toLowerCase();
 
   const expiresAt = Date.now() + SESSION_MINUTES * 60_000;
@@ -216,14 +219,15 @@ export function startSession(privateKey: Uint8Array, scope: Scope, onEnd: (reaso
   };
   const timer = setTimeout(() => end(`It ended after ${SESSION_MINUTES} minutes`), SESSION_MINUTES * 60_000);
 
-  // The only calls this session will sign: approve this vault, deposit to self, withdraw or redeem
-  // own shares to self, and the testnet AUSD faucet for self. No native value, ever.
+  // The only calls this session will sign: approve one of these vaults for an exact amount of its own
+  // asset, deposit to self, withdraw or redeem own shares to self, and the testnet AUSD faucet for
+  // self. No native value, ever.
   function inScope(to: string, data: Hex) {
-    if (to === asset) {
+    if (assets.has(to)) {
       const { functionName, args } = decodeFunctionData({ abi: erc20Abi, data });
-      return functionName === "approve" && args[0].toLowerCase() === vault && args[1] !== maxUint256;
+      return functionName === "approve" && vaults.get(args[0].toLowerCase()) === to && args[1] !== maxUint256;
     }
-    if (to === vault) {
+    if (vaults.has(to)) {
       const { functionName, args } = decodeFunctionData({ abi: vaultAbi, data });
       if (functionName === "deposit") return args[1].toLowerCase() === self;
       if (functionName === "withdraw" || functionName === "redeem") {
@@ -259,19 +263,20 @@ export function startSession(privateKey: Uint8Array, scope: Scope, onEnd: (reaso
     return hash;
   }
 
-  const v = scope.vault;
   return {
     address,
     expiresAt,
     live: () => isLive && Date.now() < expiresAt,
     end,
-    approve: (amount) => send(scope.asset, encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [v, amount] })),
-    deposit: (amount) => send(v, encodeFunctionData({ abi: vaultAbi, functionName: "deposit", args: [amount, address] })),
-    withdraw: (amount) =>
-      send(v, encodeFunctionData({ abi: vaultAbi, functionName: "withdraw", args: [amount, address, address] })),
-    async redeemAll() {
-      const shares = await client.readContract({ address: v, abi: vaultAbi, functionName: "maxRedeem", args: [address] });
-      return send(v, encodeFunctionData({ abi: vaultAbi, functionName: "redeem", args: [shares, address, address] }));
+    approve: ({ vault, asset }, amount) =>
+      send(asset, encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [vault, amount] })),
+    deposit: ({ vault }, amount) =>
+      send(vault, encodeFunctionData({ abi: vaultAbi, functionName: "deposit", args: [amount, address] })),
+    withdraw: ({ vault }, amount) =>
+      send(vault, encodeFunctionData({ abi: vaultAbi, functionName: "withdraw", args: [amount, address, address] })),
+    async redeemAll({ vault }) {
+      const shares = await client.readContract({ address: vault, abi: vaultAbi, functionName: "maxRedeem", args: [address] });
+      return send(vault, encodeFunctionData({ abi: vaultAbi, functionName: "redeem", args: [shares, address, address] }));
     },
     async requestAusd() {
       if (!faucet) throw new Error("There is no AUSD faucet on this network.");
@@ -294,14 +299,14 @@ export type Position = {
   frozen: boolean;
 };
 
-export async function readPosition(scope: Scope, who: Address): Promise<Position> {
-  const client = publicClient(scope.chainId);
-  const v = { address: scope.vault, abi: vaultAbi } as const;
-  const a = { address: scope.asset, abi: erc20Abi } as const;
+export async function readPosition(chainId: number, ref: VaultRef, who: Address): Promise<Position> {
+  const client = publicClient(chainId);
+  const v = { address: ref.vault, abi: vaultAbi } as const;
+  const a = { address: ref.asset, abi: erc20Abi } as const;
   const [mon, wallet, allowance, shares, maxDeposit, maxWithdraw, cap, frozen] = await Promise.all([
     client.getBalance({ address: who }),
     client.readContract({ ...a, functionName: "balanceOf", args: [who] }),
-    client.readContract({ ...a, functionName: "allowance", args: [who, scope.vault] }),
+    client.readContract({ ...a, functionName: "allowance", args: [who, ref.vault] }),
     client.readContract({ ...v, functionName: "balanceOf", args: [who] }),
     client.readContract({ ...v, functionName: "maxDeposit", args: [who] }),
     client.readContract({ ...v, functionName: "maxWithdraw", args: [who] }),
@@ -312,8 +317,27 @@ export async function readPosition(scope: Scope, who: Address): Promise<Position
   return { mon, wallet, allowance, shares, value, maxDeposit, maxWithdraw, cap, frozen };
 }
 
-export async function assetDecimals(scope: Scope) {
-  return publicClient(scope.chainId).readContract({ address: scope.asset, abi: erc20Abi, functionName: "decimals" });
+export async function assetDecimals(chainId: number, asset: Address) {
+  return publicClient(chainId).readContract({ address: asset, abi: erc20Abi, functionName: "decimals" });
+}
+
+export type Holding = { vault: Address; shares: bigint; totalShares: bigint; value: bigint; maxWithdraw: bigint };
+
+/** Shares and their value in every vault, for the portfolio. One multicall batch. */
+export async function readHoldings(chainId: number, vaults: Address[], who: Address): Promise<Holding[]> {
+  const client = publicClient(chainId);
+  return Promise.all(
+    vaults.map(async (vault) => {
+      const v = { address: vault, abi: vaultAbi } as const;
+      const [shares, totalShares, maxWithdraw] = await Promise.all([
+        client.readContract({ ...v, functionName: "balanceOf", args: [who] }),
+        client.readContract({ ...v, functionName: "totalSupply" }),
+        client.readContract({ ...v, functionName: "maxWithdraw", args: [who] }),
+      ]);
+      const value = shares === 0n ? 0n : await client.readContract({ ...v, functionName: "convertToAssets", args: [shares] });
+      return { vault, shares, totalShares, value, maxWithdraw };
+    }),
+  );
 }
 
 // ---- Errors ---------------------------------------------------------------------------

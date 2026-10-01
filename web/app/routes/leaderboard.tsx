@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import type { Route } from "./+types/leaderboard";
 import { AgentBadges } from "../components/agent-badges";
 import { Halftone } from "../components/halftone";
@@ -50,9 +51,9 @@ function AgentCell({ row, chainId }: { row: Row; chainId: number }) {
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <a href={`/agent/${row.agentId}`} className="text-[17px] font-medium tracking-[-0.01em] underline decoration-line underline-offset-4 hover:decoration-ink">
+        <Link to={`/agent/${row.agentId}`} className="text-[17px] font-medium tracking-[-0.01em] underline decoration-line underline-offset-4 hover:decoration-ink">
           {row.name}
-        </a>
+        </Link>
         <AgentBadges house={row.house} frozen={row.frozen} />
       </div>
       <p className="mt-1 font-mono text-[12px] text-muted">

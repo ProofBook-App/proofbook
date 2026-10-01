@@ -205,3 +205,49 @@ export const ACTIVITY_QUERY = /* GraphQL */ `
     }
   }
 `;
+
+export type IndexedBacker = {
+  Backer: { vault_id: string; shares: string; deposited: string; withdrawn: string; firstSeenAt: number }[];
+  Flow: { id: string; kind: string; vault_id: string; assets: string; timestamp: number; txHash: string }[];
+};
+
+// One account's stake in every vault, and its own deposits and withdrawals. Addresses are checksummed.
+export const BACKER_QUERY = /* GraphQL */ `
+  query Backer($account: String!, $limit: Int!) {
+    Backer(where: { account: { _eq: $account } }) {
+      vault_id
+      shares
+      deposited
+      withdrawn
+      firstSeenAt
+    }
+    Flow(where: { account: { _eq: $account }, kind: { _neq: "Fee" } }, order_by: { timestamp: desc }, limit: $limit) {
+      id
+      kind
+      vault_id
+      assets
+      timestamp
+      txHash
+    }
+  }
+`;
+
+export type IndexedTrades = {
+  Trade: { id: string; vault_id: string; kind: string; notional: string; navBefore: string; navAfter: string; timestamp: number; txHash: string }[];
+};
+
+// The latest trades across a set of vaults: what the agents a backer funds have been doing.
+export const TRADES_QUERY = /* GraphQL */ `
+  query Trades($vaults: [String!]!, $limit: Int!) {
+    Trade(where: { vault_id: { _in: $vaults } }, order_by: { block: desc }, limit: $limit) {
+      id
+      vault_id
+      kind
+      notional
+      navBefore
+      navAfter
+      timestamp
+      txHash
+    }
+  }
+`;
