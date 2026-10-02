@@ -40,8 +40,8 @@
 				"maxSizeAusd": "50",
 				"thresholdBps": 100,
 				"lookbackMinutes": 30,
-				"privyWalletId": "",
-				"privyWalletAddress": ""
+				"privyWalletId": "wnv9gal23ndaqtce5l0kgz2i",
+				"privyWalletAddress": "0x552874909A030344fC5eBB4E29A935E2bEe8B082"
 			}
 		]
 	}

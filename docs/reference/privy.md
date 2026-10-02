@@ -50,6 +50,17 @@ Other firsthand notes:
 - Once a wallet has an owner, every `/rpc` call needs the owner's signature: an ECDSA P-256 / SHA-256 signature over RFC 8785-canonical JSON `{version:1, method, url, body, headers:{privy-app-id, privy-request-expiry}}`, sent base64 DER in `privy-authorization-signature`. We implement it in about 10 lines with `node:crypto` and no SDK. `privy-request-expiry` (unix ms) is optional, but if sent it must be part of the signed payload.
 - A denial costs nothing onchain, because the policy runs before signing. Only an error comes back.
 
+## House agent #1 on testnet (2026-10-02, firsthand)
+
+Created by `agents/scripts/privy-setup.mjs` for the `proofbook-agents` Worker.
+
+| Resource | ID |
+|---|---|
+| Policy (chain 10143, to = vault `0x98e2…2B53`, value 0, `execute`, venue = PerplAdapter `0x583B…aB09`) | `gpyj5hvzmj9auwjgm51ovqkl` |
+| Server wallet (house agent #1's session key once rotated) | `wnv9gal23ndaqtce5l0kgz2i`, address `0x552874909A030344fC5eBB4E29A935E2bEe8B082` |
+
+The script's two signing checks: `execute(adapter)` on the vault was **signed**, and `execute(0x…dEaD)` on the vault got **`policy_violation`**. So the calldata rule on `execute`'s `venue` argument works: Privy enforces the adapter allowlist as well as the vault.
+
 ## Doc claims (not verified firsthand)
 
 - **Chain support:** EVM is "Tier 3" (sign, send, track). Monad `eip155:143` and Monad Testnet `eip155:10143` appear in Privy's EVM chain tables (swaps, deposit automations) and in the gas-sponsorship network list. Docs don't say which RPC Privy uses to broadcast on Monad. Client SDK docs mention "Privy's default RPC providers" with rate limits.
