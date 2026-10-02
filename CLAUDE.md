@@ -24,7 +24,7 @@ Domain: `proofbook.app` (Cloudflare Registrar, served by the web Worker). GitHub
 - `docs/brand/voice.md`: how we write (banned AI-writing patterns). `docs/brand/research.md`: sourced figures, and only those marked verified go on the site. `web/DESIGN.md`: colour, type, layout. `PRODUCT.md`: product record for design work. Read them before writing copy or UI.
 - `.claude/rules/`: per-package rules that load automatically when working in `contracts/`, `indexer/`, `web/`, `agents|cli|plugin/`
 
-Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`), `indexer/`, `web/`, `cli/` (the `proofbook` CLI, also the library the plugin bundles) and `plugin/` (`mm-plugin-proofbook`, the MetaMask Agent Wallet plugin and its `skills/proofbook/SKILL.md`).
+Layout (pnpm workspace + Foundry): `contracts/` `agents/` `indexer/` `web/` `cli/` `plugin/`. Scaffolded so far: `contracts/` (OpenZeppelin v5.7.0 and forge-std as git submodules, so clone with `--recurse-submodules`), `indexer/`, `web/`, `cli/` (the `proofbook` CLI, also the library the plugin bundles), `plugin/` (`mm-plugin-proofbook`, the MetaMask Agent Wallet plugin and its `skills/proofbook/SKILL.md`) and `agents/` (the `proofbook-agents` house-agent Worker: Kimi K2.6, off-chain validator, Privy signing).
 
 ## Commands
 
@@ -47,6 +47,9 @@ PROOFBOOK_PK_FILE=... node cli/dist/cli.js agent fund <id> 5 --signer env   # en
 pnpm --filter proofbook test                            # offline encoding tests (build first)
 pnpm --filter proofbook artifacts                       # after changing PerplAdapter: forge build, then this (embeds its creation bytecode)
 pnpm --filter mm-plugin-proofbook build && pnpm --filter mm-plugin-proofbook check   # mm plugin bundle + install-time manifest checks
+cd agents && pnpm test                                  # house agents: validator, encoding vs CLI, Privy signature, momentum
+cd agents && npx wrangler d1 migrations apply proofbook --local && env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID npx wrangler dev --test-scheduled   # then curl 'localhost:8787/__scheduled?cron=*/5+*+*+*+*' (dry run, Kimi via remote AI binding)
+cd agents && node --env-file=../.env scripts/privy-setup.mjs --vault … --adapter …   # HUMAN: Privy policy + wallet; then scripts/rotate-and-fund.sh; see agents/README.md "Going live"
 ```
 
 ## Invariants (spec §6): never violate, tests first

@@ -1,0 +1,5 @@
+# Only needed when MODE is "live" (wrangler.jsonc vars). Dry runs need no secrets.
+# In production these are Worker secrets on proofbook-agents (`wrangler secret put <NAME>`).
+PRIVY_APP_ID=
+PRIVY_APP_SECRET=
+PRIVY_AUTH_KEY=

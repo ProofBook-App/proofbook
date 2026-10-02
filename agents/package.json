@@ -1,0 +1,27 @@
+{
+	"name": "@proofbook/agents",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"description": "Proofbook house agents: a Cloudflare Worker cron that asks Kimi K2.6 for a decision, checks it against the vault's limits and signs through a Privy server wallet",
+	"scripts": {
+		"dev": "wrangler dev --test-scheduled",
+		"deploy": "wrangler deploy",
+		"typecheck": "wrangler types && tsc --noEmit",
+		"cf-typegen": "wrangler types",
+		"postinstall": "wrangler types",
+		"test": "pnpm --filter proofbook build && node --test test/*.test.ts"
+	},
+	"dependencies": {
+		"viem": "^2.57.1"
+	},
+	"devDependencies": {
+		"@types/node": "24.12.2",
+		"proofbook": "workspace:*",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.144.0"
+	},
+	"engines": {
+		"node": ">=22.18"
+	}
+}

@@ -131,6 +131,24 @@ Agent #1976 is a CLI test agent, not a house agent; its vault is frozen with NAV
 
 **`--signer mm` on testnet does not work with mm 7.0.0.** MetaMask's hosted RPC answers `Invalid chainId` for 10143: first in gas-fee estimation, and when the CLI supplies the fees itself, in mm's block tracker, which then polls forever past `--wallet-timeout`. No request reaches the wallet (none pending, the wallet's testnet nonce is still 0). The CLI now stops mm as soon as it logs that error and says nothing was signed. Monad mainnet is supported by mm, so the mm path is for mainnet once the registry is deployed there.
 
+### House agents (`agents/`)
+
+The house agents run in the Cloudflare Worker `proofbook-agents`, on a cron every 5 minutes, on testnet. Each one is labelled as a house agent and trades a small size with a fixed, public strategy. House agent #1 (#1951) is momentum on Perpl's MON mark at 1x: 25 AUSD positions, a 1% move over 30 minutes to open, and 0.5% against to close.
+
+Each run:
+- reads the vault and Perpl state from the chain;
+- asks **Kimi K2.6** (`@cf/moonshotai/kimi-k2.6` through the Workers AI binding) to call one tool: `hold`, `open_long`, `open_short` or `close`, with a size and a one-sentence public reason;
+- checks that answer off-chain (`agents/src/validate.ts`): known action, not frozen, size within `maxTradeNotional` and the agent's own limit, the 3% price band, and daily-loss headroom;
+- checks the adapter's `quoteNotional`, then simulates `vault.execute` from the session key;
+- in live mode only, signs through a **Privy server wallet**, whose policy allows only `execute` on that vault and adapter, on 10143, with value 0;
+- broadcasts with an explicit gas limit of estimate + 5%.
+
+Every run writes a row to D1 `agent_decisions`: prompt, response, action, size, validity, reason, tx hash and error. That table is the track record.
+
+- **Status (2026-10-02):** built and dry-run verified locally against house agent #1. Kimi produced real decisions: a `hold` with no history, then a `close` of the 1,828-lot long once history was there. The close was validated, quoted at 61.238 AUSD and simulated OK from session key `0xB41a…2Bf2`. Nothing was signed.
+- **Live is pending human setup:** create the Privy policy and wallet, rotate the session key, fund the wallet, then `MODE=live` and deploy. Steps are in [agents/README.md](agents/README.md#going-live-human-steps-testnet).
+- **Tests:** `pnpm --filter @proofbook/agents test` covers the validator, encoding parity with the CLI, the Privy RFC 8785 payload and DER signature, and momentum.
+
 ### MetaMask Agent Wallet plugin (`plugin/`)
 
 `mm-plugin-proofbook` adds `mm proofbook agent create|fund|run|freeze|status` to the `mm` CLI through the Agent Wallet's plugin system (beta, mm 6.2.0+). Each command extends `PluginCommand` from `@metamask/agent-wallet/plugin` and signs with `ctx.walletExecutor`, the executor behind `mm wallet send-transaction`, so MetaMask's policy, Guard mode and 2FA apply and the plugin never sees a key, the session token or the SRP. The write commands declare `wallet-submit` in `package.json#mm` and get the executor only after the user approves the consent screen. `skills/proofbook/SKILL.md` tells an AI agent how to install it and drive it: confirmation rules, 2FA, the testnet limits, errors. See [plugin/README.md](plugin/README.md) for install steps, known gaps and a 5-minute demo script.

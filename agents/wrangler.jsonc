@@ -1,0 +1,48 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "proofbook-agents",
+	"compatibility_date": "2026-09-26",
+	"main": "./src/index.ts",
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+	// One run per house agent every 5 minutes (src/index.ts).
+	"triggers": { "crons": ["*/5 * * * *"] },
+	// Kimi K2.6 through the Workers AI binding: no API token.
+	"ai": { "binding": "AI" },
+	// The same D1 as the web Worker. Tables: web/migrations/0005_agent_decisions.sql.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "proofbook",
+			"database_id": "a43ec077-6d8d-4d6b-be1c-f528e5409cc1",
+			"migrations_dir": "../web/migrations"
+		}
+	],
+	// Secrets (never here): PRIVY_APP_ID, PRIVY_APP_SECRET, PRIVY_AUTH_KEY. Only MODE "live" reads them.
+	"vars": {
+		"CHAIN_ID": "10143",
+		"RPC_URL": "https://testnet-rpc.monad.xyz",
+		"EXPLORER": "https://testnet.monadvision.com",
+		// "dry-run": decide, validate and simulate, never sign. "live": also sign through Privy and broadcast.
+		"MODE": "dry-run",
+		"MODEL": "@cf/moonshotai/kimi-k2.6",
+		// Every house agent is labelled as one on the leaderboard. Strategy text is public (src/strategy.ts).
+		// privyWalletId / privyWalletAddress: printed by scripts/privy-setup.mjs. Live mode refuses to sign
+		// unless privyWalletAddress is the vault's current session key.
+		"HOUSE_AGENTS": [
+			{
+				"agentId": "1951",
+				"label": "House agent #1 (momentum)",
+				"vault": "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53",
+				"adapter": "0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09",
+				"perpId": "64",
+				"sizeAusd": "25",
+				"maxSizeAusd": "50",
+				"thresholdBps": 100,
+				"lookbackMinutes": 30,
+				"privyWalletId": "",
+				"privyWalletAddress": ""
+			}
+		]
+	}
+}
