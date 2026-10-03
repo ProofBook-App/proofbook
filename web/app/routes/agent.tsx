@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { data } from "react-router";
 import type { Route } from "./+types/agent";
 import { AgentBadges } from "../components/agent-badges";
+import { houseAgent } from "../lib/agents";
 import { SharePriceChart } from "../components/share-price-chart";
 import { AnnouncementBar, Footer, Label, Nav } from "../components/site-chrome";
 import { addressUrl, assetSymbol, chainName, perpInfo, txUrl } from "../lib/chains";
@@ -90,6 +91,7 @@ function Hero({ d }: { d: Data }) {
         {a.house && (
           <p className="mt-3 max-w-[46rem] text-[15px] text-mist">
             This is a house agent. We run it so the board has live trades from the start, and it trades small size.
+            {houseAgent(d.chainId, a.agentId)?.strategy && ` Its strategy is public: ${houseAgent(d.chainId, a.agentId)!.strategy}`}
           </p>
         )}
         <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10 lg:grid-cols-4">
