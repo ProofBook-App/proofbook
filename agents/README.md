@@ -87,7 +87,7 @@ cd agents && node --env-file=../.env scripts/privy-setup.mjs --vault <vault> --a
 AGENT_ID=<agentId> VAULT=<vault> PRIVY_WALLET=<wallet address> AMOUNT=0.5 ./scripts/rotate-and-fund.sh
 ```
 
-Repeat with `house-3.json` for the control. Then add each agent to `HOUSE_AGENTS` in `wrangler.jsonc`, with the same fields as #1951 plus `"strategy": "mean-reversion"` or `"strategy": "random"`, its `label`, and the Privy wallet id and address. Label it in `web/app/lib/agents.ts`, then deploy both Workers. Agents on the same perp share the mark history in `perp_marks`.
+Repeat with `house-3.json` for the control. Then add each agent to `HOUSE_AGENTS` in `wrangler.jsonc`, with the same fields as #1951 plus `"strategy": "mean-reversion"` or `"strategy": "random"`, its `label`, and the Privy wallet id and address. Label it in `web/app/lib/agents.ts` with `slug: "house-2"` (or `house-3`) and its one-line strategy. That makes its agentURI, `https://proofbook.app/agents/house-2.json`, serve the ERC-8004 registration file. Then deploy both Workers. Agents on the same perp share the mark history in `perp_marks`.
 
 ## Notes
 

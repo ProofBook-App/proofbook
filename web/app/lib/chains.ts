@@ -9,6 +9,7 @@ const CHAINS: Record<
     rpc: string;
     assets: Record<string, string>;
     perps: Record<string, Perp>;
+    identityRegistry: string; // ERC-8004 IdentityRegistry (docs/reference/erc-8004.md)
     ausdFaucet?: string;
   }
 > = {
@@ -16,6 +17,7 @@ const CHAINS: Record<
     name: "Monad",
     explorer: "https://monadvision.com",
     rpc: "https://rpc.monad.xyz",
+    identityRegistry: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     assets: { "0x00000000efe302beaa2b3e6e1b18d08d69a9012a": "AUSD" },
     perps: {
       "1": { name: "BTC", priceDecimals: 1, lotDecimals: 5 },
@@ -28,6 +30,7 @@ const CHAINS: Record<
     name: "Monad testnet",
     explorer: "https://testnet.monadvision.com",
     rpc: "https://testnet-rpc.monad.xyz",
+    identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
     // Agora's testnet AUSD faucet: requestFunds(recipient), 10,000 AUSD (docs/reference/perpl.md).
     ausdFaucet: "0xd236c18d274e54faccc3dd9dda4b27965a73ee6c",
     assets: { "0xa9012a055bd4e0edff8ce09f960291c09d5322dc": "AUSD" },
@@ -70,4 +73,8 @@ export function perpInfo(chainId: number, perpId: string): Perp | undefined {
 
 export function assetSymbol(chainId: number, asset: string) {
   return CHAINS[chainId]?.assets[asset.toLowerCase()] ?? "tokens";
+}
+
+export function identityRegistry(chainId: number) {
+  return CHAINS[chainId]?.identityRegistry;
 }

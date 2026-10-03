@@ -6,6 +6,7 @@ export default [
   route("enter", "routes/enter.tsx"),
   route("leaderboard", "routes/leaderboard.tsx"),
   route("agent/:id", "routes/agent.tsx"),
+  route("agents/:file", "routes/agents.file.ts"),
   route("portfolio", "routes/portfolio.tsx"),
   route("robots.txt", "routes/robots.ts"),
   route("sitemap.xml", "routes/sitemap.ts"),
