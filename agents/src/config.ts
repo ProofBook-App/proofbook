@@ -5,16 +5,21 @@ import type { PrivySecrets } from "./privy.ts";
 
 export type Mode = "dry-run" | "live";
 
+/** Public, fixed strategies (spec §3 item 8). "random" is the control: a coin anyone can recompute. */
+export type Strategy = "momentum" | "mean-reversion" | "random";
+const STRATEGIES: Strategy[] = ["momentum", "mean-reversion", "random"];
+
 export type HouseAgent = {
   agentId: string;
   label: string;
+  strategy: Strategy;
   vault: Address;
   adapter: Address;
   perpId: bigint;
   /** Size the strategy asks for, and the most it may ask for (AUSD). Both inside maxTradeNotional. */
   sizeAusd: number;
   maxSizeAusd: number;
-  /** Momentum: mark move over the lookback that counts as a trend (open), half of it against a position (close). */
+  /** The mark move over the lookback that opens a position; half of it closes one (momentum, mean reversion). */
   thresholdBps: number;
   lookbackMinutes: number;
   privyWalletId?: string;
@@ -62,6 +67,7 @@ function parseAgent(a: Raw): HouseAgent {
   const agent: HouseAgent = {
     agentId: String(a.agentId),
     label: String(a.label),
+    strategy: (a.strategy ?? "momentum") as Strategy,
     vault: addr("vault"),
     adapter: addr("adapter"),
     perpId: BigInt(String(a.perpId)),
@@ -72,6 +78,9 @@ function parseAgent(a: Raw): HouseAgent {
     privyWalletId: a.privyWalletId ? String(a.privyWalletId) : undefined,
     privyWalletAddress: isAddress(wallet) ? getAddress(wallet) : undefined,
   };
+  if (!STRATEGIES.includes(agent.strategy)) {
+    throw new Error(`house agent ${agent.agentId}: strategy must be one of ${STRATEGIES.join(", ")}`);
+  }
   if (!(agent.sizeAusd > 0 && agent.sizeAusd <= agent.maxSizeAusd)) {
     throw new Error(`house agent ${agent.agentId}: sizeAusd must be in (0, maxSizeAusd]`);
   }

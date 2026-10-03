@@ -21,9 +21,15 @@ Proofbook's house agents run in a Cloudflare Worker (`proofbook-agents`) on Mona
 
 `MODE` in `wrangler.jsonc` is `"dry-run"` by default: steps 1–6 and 8 run, nothing is signed, and no Privy secret is read. `"live"` signs, and refuses unless the configured Privy wallet address is the vault's current session key.
 
-## Strategy (house agent #1, momentum)
+## Strategies
 
-The system prompt in `src/strategy.ts` is the published strategy, and the agent reads only that. It trades MON on Perpl at 1x and holds one position at most. It compares the mark now with the mark 30 minutes ago. When flat, a move of 1% or more opens a 25 AUSD long or short in the move's direction. An open position closes on a 0.5% move against it. With under 15 minutes of history it holds. The size limit is 50 AUSD, inside the vault's 100 AUSD `maxTradeNotional`. All of these are per agent in `HOUSE_AGENTS`.
+Each house agent has one fixed, public strategy (`strategy` in `HOUSE_AGENTS`). The same rule runs in code (`ruleDecision`) and is logged next to Kimi's answer, so a disagreement shows.
+
+- **`momentum`** (house agent #1): flat, open long when MON rose at least `thresholdBps` over `lookbackMinutes`, short when it fell that much. Close when it moves half the threshold back.
+- **`mean-reversion`**: the mirror image. It shorts a rise of `thresholdBps` and buys a fall, then closes when price moves half the threshold back its way.
+- **`random`** (the control): ignores the price. Every run it computes FNV-1a over `"<agentId>:<slot>"`, where slot is the 5-minute block-time slot. On roll 0 (one run in six) it opens long or short by the coin, or closes an open position. Anyone can recompute the coin from the agent id and the block time.
+
+Every agent trades `sizeAusd` at 1x, holds one position at most, and stays inside the vault's limits.
 
 ## Commands
 
@@ -65,6 +71,23 @@ All three need credentials, so the human runs them. Nothing here touches mainnet
    npx wrangler deploy
    ```
    The Worker already has the secrets `PRIVY_APP_ID`, `PRIVY_APP_SECRET` and `PRIVY_AUTH_KEY`. Watch the first runs with `npx wrangler tail proofbook-agents` and at `https://proofbook-agents.<account>.workers.dev/decisions`.
+
+## Adding house agents #2 and #3 (human steps, testnet)
+
+Every step signs with your keys, so you run them. Check the deployer's balance first. Entering an agent deploys an adapter, and Monad expects every EOA to keep 10 MON, so top up from https://testnet.monad.xyz if it's near 10.
+
+```bash
+cd /Users/iemarjay/Projects/metropolis/paddock && pnpm --filter proofbook build
+set -a; source .env; set +a; export PROOFBOOK_PK="$DEPLOYER_PK"
+node cli/dist/cli.js faucet --signer env                                   # test AUSD for the deposit
+node cli/dist/cli.js agent create --uri https://proofbook.app/agents/house-2.json --max-trade 100 --daily-loss-bps 1000 --deposit-cap 500 --signer env
+#   prints the agent id, vault and adapter; the session key starts as the deployer
+node cli/dist/cli.js agent fund <agentId> 200 --signer env                 # the vault needs AUSD to trade
+cd agents && node --env-file=../.env scripts/privy-setup.mjs --vault <vault> --adapter <adapter>
+AGENT_ID=<agentId> VAULT=<vault> PRIVY_WALLET=<wallet address> AMOUNT=0.5 ./scripts/rotate-and-fund.sh
+```
+
+Repeat with `house-3.json` for the control. Then add each agent to `HOUSE_AGENTS` in `wrangler.jsonc`, with the same fields as #1951 plus `"strategy": "mean-reversion"` or `"strategy": "random"`, its `label`, and the Privy wallet id and address. Label it in `web/app/lib/agents.ts`, then deploy both Workers. Agents on the same perp share the mark history in `perp_marks`.
 
 ## Notes
 

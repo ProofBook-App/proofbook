@@ -2,11 +2,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HouseAgent } from "../src/config.ts";
-import { momentum, parseToolCall, ruleDecision } from "../src/strategy.ts";
+import { draw, momentum, parseToolCall, ruleDecision } from "../src/strategy.ts";
 
 const agent: HouseAgent = {
   agentId: "1951",
   label: "House agent #1 (momentum)",
+  strategy: "momentum",
   vault: "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53",
   adapter: "0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09",
   perpId: 64n,
@@ -71,4 +72,32 @@ test("no tool call becomes 'none', which the validator rejects", () => {
   assert.equal(parseToolCall({ choices: [{ message: { content: "I would hold." } }] }).action, "none");
   assert.equal(parseToolCall({ response: "hold" }).action, "none");
   assert.equal(parseToolCall({ tool_calls: [{ name: "hold", arguments: { reason: "Flat." } }] }).action, "hold");
+});
+
+test("mean reversion bets against the move and closes on half of it back", () => {
+  const mr = { ...agent, strategy: "mean-reversion" as const };
+  const m = (changeBps: number) => ({ changeBps, samples: 7 });
+  assert.deepEqual(ruleDecision(m(120), "flat", mr), { action: "open_short", sizeAusd: mr.sizeAusd });
+  assert.deepEqual(ruleDecision(m(-120), "flat", mr), { action: "open_long", sizeAusd: mr.sizeAusd });
+  assert.deepEqual(ruleDecision(m(60), "long", mr), { action: "close" });
+  assert.deepEqual(ruleDecision(m(-60), "short", mr), { action: "close" });
+  assert.deepEqual(ruleDecision(m(-60), "long", mr), { action: "hold" });
+  assert.deepEqual(ruleDecision(m(40), "flat", mr), { action: "hold" });
+});
+
+test("the random control acts on roll 0 only, and its coin can be recomputed", () => {
+  const rnd = { ...agent, strategy: "random" as const };
+  const m = { samples: 1 };
+  const a = draw("1990", 1_791_000_000);
+  assert.deepEqual(a, draw("1990", 1_791_000_000 + 120)); // same 5-minute slot, same coin
+  assert.equal(a.slot, Math.floor(1_791_000_000 / 300));
+  assert.ok(a.roll >= 0 && a.roll < 6 && (a.coin === 0 || a.coin === 1));
+  assert.deepEqual(ruleDecision(m, "flat", rnd, { slot: 1, roll: 3, coin: 0 }), { action: "hold" });
+  assert.deepEqual(ruleDecision(m, "flat", rnd, { slot: 1, roll: 0, coin: 0 }), { action: "open_long", sizeAusd: rnd.sizeAusd });
+  assert.deepEqual(ruleDecision(m, "flat", rnd, { slot: 1, roll: 0, coin: 1 }), { action: "open_short", sizeAusd: rnd.sizeAusd });
+  assert.deepEqual(ruleDecision(m, "short", rnd, { slot: 1, roll: 0, coin: 0 }), { action: "close" });
+  // About one run in six acts.
+  let acts = 0;
+  for (let i = 0; i < 6000; i++) if (draw("1990", i * 300).roll === 0) acts++;
+  assert.ok(acts > 850 && acts < 1150, `acts ${acts}`);
 });

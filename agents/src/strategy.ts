@@ -38,31 +38,77 @@ export function momentum(now: MarkSample, history: MarkSample[], lookbackMinutes
   };
 }
 
+/**
+ * The random-walk control's coin, recomputable by anyone: FNV-1a over "agentId:slot", where slot is
+ * the 5-minute block-time slot. roll 0 (one run in six) means act; coin picks long (0) or short (1).
+ */
+export type Draw = { slot: number; roll: number; coin: number };
+
+export function draw(agentId: string, at: number): Draw {
+  const slot = Math.floor(at / 300);
+  let h = 0x811c9dc5;
+  for (const ch of `${agentId}:${slot}`) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+  return { slot, roll: h % 6, coin: (h >>> 8) % 2 };
+}
+
 /** The published rule, in code. The model is asked to apply exactly this. */
-export function ruleDecision(m: Momentum, side: Side, agent: HouseAgent): { action: Action; sizeAusd?: number } {
+export function ruleDecision(m: Momentum, side: Side, agent: HouseAgent, coin?: Draw): { action: Action; sizeAusd?: number } {
+  const open = (a: "open_long" | "open_short") => ({ action: a, sizeAusd: agent.sizeAusd }) as const;
+  if (agent.strategy === "random") {
+    if (!coin || coin.roll !== 0) return { action: "hold" };
+    if (side === "flat") return open(coin.coin === 0 ? "open_long" : "open_short");
+    return { action: "close" };
+  }
   const t = agent.thresholdBps;
   if (m.changeBps === undefined) return { action: "hold" };
+  // Momentum follows the move; mean reversion bets against it. Each closes on half the move back.
+  const revert = agent.strategy === "mean-reversion";
+  const up = revert ? "open_short" : "open_long";
+  const down = revert ? "open_long" : "open_short";
   if (side === "flat") {
-    if (m.changeBps >= t) return { action: "open_long", sizeAusd: agent.sizeAusd };
-    if (m.changeBps <= -t) return { action: "open_short", sizeAusd: agent.sizeAusd };
+    if (m.changeBps >= t) return open(up);
+    if (m.changeBps <= -t) return open(down);
     return { action: "hold" };
   }
-  if (side === "long" && m.changeBps <= -t / 2) return { action: "close" };
-  if (side === "short" && m.changeBps >= t / 2) return { action: "close" };
+  const longCloses = revert ? m.changeBps >= t / 2 : m.changeBps <= -t / 2;
+  const shortCloses = revert ? m.changeBps <= -t / 2 : m.changeBps >= t / 2;
+  if (side === "long" && longCloses) return { action: "close" };
+  if (side === "short" && shortCloses) return { action: "close" };
   return { action: "hold" };
 }
 
-export function systemPrompt(agent: HouseAgent): string {
+function rules(agent: HouseAgent): string[] {
   const t = agent.thresholdBps;
+  const size = agent.sizeAusd;
+  if (agent.strategy === "random") {
+    return [
+      `Strategy (random-walk control, public): you are the control the other house agents are measured against. Ignore the price.`,
+      `- Use random.roll and random.coin from the snapshot (a hash of your agent id and the 5-minute slot, which anyone can recompute).`,
+      `- If random.roll is not 0: hold.`,
+      `- If random.roll is 0 and you are flat: open_long ${size} AUSD if random.coin is 0, open_short ${size} AUSD if it is 1.`,
+      `- If random.roll is 0 and you hold a position: close.`,
+      `- In the reason, say it was the coin, not a view on the market.`,
+    ];
+  }
+  const [name, up, down, longClose, shortClose] =
+    agent.strategy === "mean-reversion"
+      ? ["mean reversion", "open_short", "open_long", `>= ${t / 2}`, `<= -${t / 2}`]
+      : ["momentum", "open_long", "open_short", `<= -${t / 2}`, `>= ${t / 2}`];
+  return [
+    `Strategy (${name}, public):`,
+    `- Use change_lookback_bps: the mark's change over the last ${agent.lookbackMinutes} minutes.`,
+    `- If it is null, there is not enough price history: hold.`,
+    `- Flat: if change_lookback_bps >= ${t}, ${up} ${size} AUSD. If <= -${t}, ${down} ${size} AUSD. Otherwise hold.`,
+    `- Long: close if change_lookback_bps ${longClose}. Otherwise hold.`,
+    `- Short: close if change_lookback_bps ${shortClose}. Otherwise hold.`,
+  ];
+}
+
+export function systemPrompt(agent: HouseAgent): string {
   return [
     `You are ${agent.label}, a Proofbook house agent. House agents are run by the Proofbook team, plainly labelled, and trade small size with a fixed public strategy.`,
     `You trade one Perpl perpetual (MON) through your vault at 1x leverage. You hold at most one position.`,
-    `Strategy (momentum, public):`,
-    `- Use change_lookback_bps: the mark's change over the last ${agent.lookbackMinutes} minutes.`,
-    `- If it is null, there is not enough price history: hold.`,
-    `- Flat: if change_lookback_bps >= ${t}, open_long ${agent.sizeAusd} AUSD. If <= -${t}, open_short ${agent.sizeAusd} AUSD. Otherwise hold.`,
-    `- Long: close if change_lookback_bps <= -${t / 2}. Otherwise hold.`,
-    `- Short: close if change_lookback_bps >= ${t / 2}. Otherwise hold.`,
+    ...rules(agent),
     `- Never size above ${agent.maxSizeAusd} AUSD or the vault's max_trade_ausd. If the vault is frozen, hold.`,
     `Call exactly one tool. The reason is one plain sentence for backers, with the numbers you used, shown publicly next to the trade. Write it in everyday words ("MON fell 1.1% in the last 30 minutes"), percentages rather than basis points, and never a field name like change_lookback_bps.`,
   ].join("\n");
@@ -99,7 +145,7 @@ export const tools = [
 ];
 
 /** The compact snapshot the model reads. Prices in USD, amounts in AUSD, as decimal strings. */
-export function context(obs: Observation, m: Momentum, headroom: bigint) {
+export function context(obs: Observation, m: Momentum, headroom: bigint, coin?: Draw) {
   const d = obs.decimals;
   const pd = Number(obs.market.priceDecimals);
   const pos = obs.position;
@@ -114,6 +160,7 @@ export function context(obs: Observation, m: Momentum, headroom: bigint) {
       change_last_5m_bps: m.lastStepBps ?? null,
       samples: m.samples,
     },
+    ...(coin ? { random: { slot: coin.slot, roll: coin.roll, coin: coin.coin } } : {}),
     position:
       pos.side === "flat"
         ? { side: "flat" }

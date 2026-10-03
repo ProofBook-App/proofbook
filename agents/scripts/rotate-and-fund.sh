@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# HUMAN-RUN. Monad TESTNET (10143) only. Moves house agent #1's session key to its Privy wallet and
+# HUMAN-RUN. Monad TESTNET (10143) only. Moves a house agent's session key to its Privy wallet and
 # sends that wallet test MON for gas. Both are real (testnet) transactions; read before running.
+# Defaults to house agent #1; for another agent set AGENT_ID and VAULT too.
 #
 #   cd agents
 #   set -a; source ../.env; set +a        # DEPLOYER_PK (the agent owner), optionally FUNDER_PK
@@ -21,7 +22,9 @@
 set -euo pipefail
 
 RPC="${RPC_URL:-https://testnet-rpc.monad.xyz}"
+AGENT_ID="${AGENT_ID:-1951}"
 VAULT="${VAULT:-0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53}"   # house agent #1 (agent #1951)
+[ "$AGENT_ID" = "1951" ] || [ "$VAULT" != "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53" ] || { echo "AGENT_ID is $AGENT_ID but VAULT is still #1951's; set VAULT." >&2; exit 1; }
 AMOUNT="${AMOUNT:-3ether}"                                      # MON for the Privy wallet's gas
 RESERVE_WEI="${RESERVE_WEI:-10000000000000000000}"              # 10 MON
 : "${PRIVY_WALLET:?set PRIVY_WALLET to the address privy-setup.mjs printed}"
@@ -33,7 +36,9 @@ chain=$(cast chain-id --rpc-url "$RPC")
 
 owner=$(cast wallet address --private-key "$DEPLOYER_PK")
 funder=$(cast wallet address --private-key "$FUNDER_PK")
-agent_owner=$(cast call 0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC 'ownerOf(uint256)(address)' 1951 --rpc-url "$RPC")
+agent_owner=$(cast call 0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC 'ownerOf(uint256)(address)' "$AGENT_ID" --rpc-url "$RPC")
+registered=$(cast call 0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC 'vaultOf(uint256)(address)' "$AGENT_ID" --rpc-url "$RPC")
+[ "$(echo "$registered" | tr A-F a-f)" = "$(echo "$VAULT" | tr A-F a-f)" ] || { echo "agent $AGENT_ID's vault is $registered, not $VAULT; refusing." >&2; exit 1; }
 current=$(cast call "$VAULT" 'sessionKey()(address)' --rpc-url "$RPC")
 echo "vault           $VAULT"
 echo "agent owner     $agent_owner (signing as $owner)"

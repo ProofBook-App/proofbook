@@ -18,7 +18,7 @@ import {
   sellPrice,
 } from "./perpl.ts";
 import { privySignTransaction } from "./privy.ts";
-import { askKimi, context, momentum, ruleDecision } from "./strategy.ts";
+import { askKimi, context, draw, momentum, ruleDecision } from "./strategy.ts";
 import { checkOrder, checkProposal, checkQuote, dailyLossHeadroom, fmt, type Checked, type VaultView } from "./validate.ts";
 
 const GAS_HEADROOM_PCT = 105n; // estimate + 5%: Monad charges the whole gas limit
@@ -50,6 +50,7 @@ export async function runAgent(env: Env, cfg: Config, agent: HouseAgent) {
   const now = { at: Number(obs.blockTime), mark: obs.market.mark };
   const history = await recordMark(env.DB, cfg.chainId, agent.perpId, now, Number(obs.market.priceDecimals), agent.lookbackMinutes);
   const m = momentum(now, history, agent.lookbackMinutes);
+  const coin = agent.strategy === "random" ? draw(agent.agentId, now.at) : undefined;
   const view: VaultView = {
     frozen: obs.frozen,
     decimals: d,
@@ -62,13 +63,13 @@ export async function runAgent(env: Env, cfg: Config, agent: HouseAgent) {
     mark: obs.market.mark,
   };
   const headroom = dailyLossHeadroom(view);
-  const snapshot = context(obs, m, headroom);
+  const snapshot = context(obs, m, headroom, coin);
   const detail: Record<string, unknown> = {
     block: obs.block,
     sessionKey: obs.sessionKey,
     snapshot,
     momentum: m,
-    rule: ruleDecision(m, obs.position.side, agent),
+    rule: ruleDecision(m, obs.position.side, agent, coin),
   };
 
   if (obs.frozen) {
