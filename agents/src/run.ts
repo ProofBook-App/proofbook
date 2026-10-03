@@ -1,7 +1,7 @@
 // One run for one house agent: observe → ask Kimi → validate → quote → simulate → (live) sign and send
 // → log. Every run writes one agent_decisions row, whatever happens, so the track record has no gaps.
 import { getAddress, parseTransaction, recoverTransactionAddress, type Address, type Hex, type PublicClient } from "viem";
-import { clientFor, observe, quoteNotional, revertReason, simulateExecute, type Observation } from "./chain.ts";
+import { clientFor, observe, quoteNotional, revertReason, sendError, simulateExecute, type Observation } from "./chain.ts";
 import { privySecrets, type Config, type HouseAgent } from "./config.ts";
 import { json, logDecision, recordMark, type DecisionRow } from "./db.ts";
 import {
@@ -202,7 +202,7 @@ export async function runAgent(env: Env, cfg: Config, agent: HouseAgent) {
       detail,
     });
   } catch (e) {
-    return fail(`send failed: ${e instanceof Error ? e.message : String(e)}`);
+    return fail(`send failed: ${sendError(e)}`);
   }
 }
 

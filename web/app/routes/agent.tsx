@@ -8,7 +8,7 @@ import { addressUrl, assetSymbol, chainName, perpInfo, txUrl } from "../lib/chai
 import { formatBps, formatSigned, formatTime, formatUnits, shortAddress, tone } from "../lib/format";
 import { SITE_URL } from "../lib/site";
 import { dripEnabled } from "../lib/drip.server";
-import { readActivity, readAgent } from "../lib/snapshot.server";
+import { readActivity, readAgent, readDecisions } from "../lib/snapshot.server";
 
 // Wallet UI is browser-only (a passkey account and signing session), so it loads after hydration.
 const BackPanel = lazy(() => import("../components/back-panel.client"));
@@ -17,8 +17,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env;
   const snapshot = /^\d{1,78}$/.test(params.id) ? await readAgent(env, params.id) : null;
   if (!snapshot) throw data(`No agent ${params.id} on ${chainName(Number(env.CHAIN_ID))}`, { status: 404 });
-  const activity = await readActivity(env, snapshot.agent.vault, 25);
-  return { ...snapshot, activity, drip: dripEnabled(env) };
+  const [activity, decisions] = await Promise.all([
+    readActivity(env, snapshot.agent.vault, 25),
+    snapshot.agent.house ? readDecisions(env, snapshot.agent.agentId) : null,
+  ]);
+  return { ...snapshot, activity, decisions, drip: dripEnabled(env) };
 }
 
 export function meta({ loaderData, params }: Route.MetaArgs) {
@@ -328,6 +331,75 @@ function Activity({ d }: { d: Data }) {
   );
 }
 
+const ACTION: Record<string, string> = {
+  hold: "Hold",
+  open_long: "Open long",
+  open_short: "Open short",
+  close: "Close",
+  deposit_margin: "Margin to Perpl",
+  stop: "Stop",
+  none: "No action",
+};
+
+// Rows written before the agent kept errors short carry viem's whole message (with the signed tx);
+// show the node's reason only.
+function shortError(e: string) {
+  const details = /Details: (.+?)\s*(?:Version:|$)/s.exec(e)?.[1];
+  const text = (details ?? e.split(/\s(?:URL|Request body): /)[0]).replace(/^send failed: /, "");
+  if (/insufficient (balance|funds)/i.test(text)) return "the agent's wallet had run out of MON for gas";
+  return text.length > 160 ? `${text.slice(0, 157)}…` : text;
+}
+
+// The house agent's own account of each trade: what Kimi decided and why, checked against the
+// limits before Privy signed it. Written by the proofbook-agents Worker every 5 minutes.
+function Decisions({ d }: { d: Data }) {
+  const log = d.decisions!;
+  const latest = log.latest!;
+  return (
+    <Card label="Decisions" title="Why it trades" className="lg:col-span-2">
+      <p className="max-w-[60ch] text-[15px] text-muted">
+        Every 5 minutes Kimi K2.6 reads the vault and the MON price and picks hold, long, short or close, with a
+        reason. Code checks each pick against the vault's limits and simulates it before a Privy wallet signs it.
+        The wallet's policy lets it call only this vault, through the Perpl adapter. The rule is plain momentum: open
+        when MON moves more than 1% in 30 minutes, close when it turns back 0.5%.
+      </p>
+      <div className="mt-5 rounded-lg bg-panel px-4 py-3">
+        <p className="text-[12px] text-muted">
+          Latest decision, {formatTime(latest.at)}
+          {latest.mode !== "live" && " (dry run)"}
+        </p>
+        <p className="mt-1 text-[15px]">
+          <span className="font-medium">{ACTION[latest.action] ?? latest.action}.</span> {latest.reason}
+        </p>
+      </div>
+      {log.trades.length > 0 ? (
+        <ol className="mt-4 divide-y divide-line">
+          {log.trades.map((t) => (
+            <li key={t.id} className="py-3 first:pt-0">
+              <p className="text-[15px] font-medium">
+                {ACTION[t.action] ?? t.action}
+                {t.size && t.action.startsWith("open") && ` ${t.size} ${assetSymbol(d.chainId, d.agent.asset)}`}
+              </p>
+              <p className="text-[13px] text-muted">
+                {t.error ? `Not sent: ${shortError(t.error)}.` : t.reason} {formatTime(t.at)}.{" "}
+                {t.tx_hash && <ExtLink href={txUrl(d.chainId, t.tx_hash)}>Transaction</ExtLink>}
+              </p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-4 text-[15px] text-muted">No live trades yet.</p>
+      )}
+      {log.since && (
+        <p className="mt-3 font-mono text-[12px] text-muted">
+          {log.runs.toLocaleString("en-US")} live runs and {log.liveTrades} trades since {formatTime(log.since)}. Model{" "}
+          {latest.model}.
+        </p>
+      )}
+    </Card>
+  );
+}
+
 // The server renders a placeholder of the same size; the panel replaces it once the page hydrates.
 function Back({ d }: { d: Data }) {
   const [mounted, setMounted] = useState(false);
@@ -379,6 +451,7 @@ export default function Agent({ loaderData: d }: Route.ComponentProps) {
           <div className="grid gap-4 lg:grid-cols-2">
             <Limits d={d} />
             <Positions d={d} />
+            {d.decisions && d.decisions.latest && <Decisions d={d} />}
             <Activity d={d} />
           </div>
         </div>

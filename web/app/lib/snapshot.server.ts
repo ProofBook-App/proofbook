@@ -376,3 +376,47 @@ export async function readBacker(env: SnapshotEnv, account: string, limit = 20) 
     : [];
   return { ...board, account, history, positions };
 }
+
+export type Decision = {
+  id: number;
+  at: number;
+  mode: string;
+  model: string;
+  action: string;
+  size: string | null;
+  valid: number;
+  reason: string | null;
+  tx_hash: string | null;
+  error: string | null;
+};
+
+// A house agent's decision log, written by the proofbook-agents Worker every run (agents/src/run.ts):
+// the latest decision, the live trades it sent, and run counts. Prompts and raw responses stay in
+// D1; the page shows the public reason only. Null before the table exists (a fresh local database).
+export async function readDecisions(env: SnapshotEnv, agentId: string, limit = 10) {
+  const chainId = Number(env.CHAIN_ID);
+  const cols = `id, at, mode, model, action, size, valid, reason, tx_hash, error`;
+  try {
+    const [latest, trades, counts] = await env.DB.batch([
+      env.DB.prepare(`SELECT ${cols} FROM agent_decisions WHERE chain_id = ?1 AND agent_id = ?2 ORDER BY id DESC LIMIT 1`).bind(chainId, agentId),
+      env.DB.prepare(
+        `SELECT ${cols} FROM agent_decisions WHERE chain_id = ?1 AND agent_id = ?2 AND mode = 'live' AND (tx_hash IS NOT NULL OR error IS NOT NULL)
+         ORDER BY id DESC LIMIT ?3`,
+      ).bind(chainId, agentId, limit),
+      env.DB.prepare(
+        `SELECT COUNT(*) AS runs, SUM(tx_hash IS NOT NULL) AS trades, MIN(at) AS since FROM agent_decisions
+         WHERE chain_id = ?1 AND agent_id = ?2 AND mode = 'live'`,
+      ).bind(chainId, agentId),
+    ]);
+    const c = counts.results[0] as { runs: number; trades: number | null; since: number | null };
+    return {
+      latest: (latest.results[0] as Decision | undefined) ?? null,
+      trades: trades.results as Decision[],
+      runs: c.runs,
+      liveTrades: c.trades ?? 0,
+      since: c.since,
+    };
+  } catch {
+    return null;
+  }
+}

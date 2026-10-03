@@ -192,6 +192,12 @@ export async function simulateExecute(client: PublicClient, from: Address, vault
   }
 }
 
+/** A failed send in one line. viem's message carries the request body (the signed tx); keep the node's reason. */
+export function sendError(e: unknown): string {
+  if (e instanceof BaseError) return e.details || e.shortMessage;
+  return e instanceof Error ? e.message.split("\n")[0] : String(e);
+}
+
 export function revertReason(e: unknown): string {
   if (e instanceof BaseError) {
     const revert = e.walk((x) => x instanceof ContractFunctionRevertedError);

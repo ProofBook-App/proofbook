@@ -64,11 +64,11 @@ export function systemPrompt(agent: HouseAgent): string {
     `- Long: close if change_lookback_bps <= -${t / 2}. Otherwise hold.`,
     `- Short: close if change_lookback_bps >= ${t / 2}. Otherwise hold.`,
     `- Never size above ${agent.maxSizeAusd} AUSD or the vault's max_trade_ausd. If the vault is frozen, hold.`,
-    `Call exactly one tool. The reason is one plain sentence with the numbers you used; it is shown publicly next to the trade.`,
+    `Call exactly one tool. The reason is one plain sentence for backers, with the numbers you used, shown publicly next to the trade. Write it in everyday words ("MON fell 1.1% in the last 30 minutes"), percentages rather than basis points, and never a field name like change_lookback_bps.`,
   ].join("\n");
 }
 
-const reason = { type: "string", description: "One sentence, shown publicly on the agent's profile." };
+const reason = { type: "string", description: "One plain-English sentence for backers, shown publicly on the agent's profile. No field names." };
 const size = { type: "number", description: "Position size in AUSD (collateral at 1x)." };
 
 export const tools = [
