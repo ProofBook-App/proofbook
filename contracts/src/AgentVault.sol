@@ -114,6 +114,22 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         }
     }
 
+    /// @notice Anyone may freeze the vault once NAV is below today's floor, without waiting for an
+    /// execute (security review M1). The agent can stop trading while a leveraged position keeps
+    /// losing, and the breach check in execute would never run. Uses the stored day baseline, so a
+    /// loss overnight counts before the next execute opens a new day. Refused while a venue can't
+    /// be priced: an unreadable venue counts as 0, which isn't a loss. Returns true if it froze.
+    function checkLoss() external nonReentrant returns (bool) {
+        if (frozen || _currentDay == 0) return false;
+        if (!venuesReliable()) revert ExposureUnreliable();
+        uint256 navNow = nav();
+        uint256 floor = dayStartNav.mulDiv(BPS - dailyLossCapBps, BPS, Math.Rounding.Ceil);
+        if (navNow >= floor) return false;
+        emit PolicyBreach(BreachReason.DailyLossCap, navNow, dayStartNav);
+        _freeze(address(this));
+        return true;
+    }
+
     // ------------------------------------------------------------------ controls
 
     function rotateSessionKey(address next) external onlyAgentOwner {
@@ -151,8 +167,19 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
     function nav() public view returns (uint256 total) {
         total = IERC20(asset()).balanceOf(address(this));
         for (uint256 i; i < _venues.length; ++i) {
-            total += IVenueAdapter(_venues[i]).exposure(address(this));
+            (uint256 value,) = _exposureOf(_venues[i]);
+            total += value;
         }
+    }
+
+    /// @dev One venue's exposure. A revert or a malformed reply (a venue upgraded to a different
+    /// struct shape, say) counts as 0 instead of reverting nav(), so withdrawals keep working
+    /// (invariant 4; security review M2). venuesReliable() then reports the venue as unreliable.
+    function _exposureOf(address venue) internal view returns (uint256 value, bool ok) {
+        (bool success, bytes memory ret) =
+            venue.staticcall(abi.encodeCall(IVenueAdapter.exposure, (address(this))));
+        if (!success || ret.length < 32) return (0, false);
+        return (abi.decode(ret, (uint256)), true);
     }
 
     /// @notice NAV net of the performance fee owed on profit above the high-water mark.
@@ -182,6 +209,8 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
     /// whose check reverts counts as unreliable.
     function venuesReliable() public view returns (bool) {
         for (uint256 i; i < _venues.length; ++i) {
+            (, bool read) = _exposureOf(_venues[i]);
+            if (!read) return false;
             try IVenueAdapter(_venues[i]).exposureReliable(address(this)) returns (bool ok) {
                 if (!ok) return false;
             } catch {
@@ -292,8 +321,16 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         IERC20 token = IERC20(asset());
         if (token.balanceOf(address(this)) < fee) return;
 
-        address to = registry.ownerOf(agentId);
-        token.safeTransfer(to, fee);
+        // A recipient that can't be found (burned identity) or can't receive (a blocklisted
+        // address) leaves the fee pending instead of reverting every withdrawal (security review
+        // M3). totalAssets() and maxWithdraw() already keep a pending fee out of what backers own.
+        address to;
+        try registry.ownerOf(agentId) returns (address owner_) {
+            to = owner_;
+        } catch {
+            return;
+        }
+        if (to == address(0) || !token.trySafeTransfer(to, fee)) return;
         _onOutflow(fee);
         highWaterMark = nav().mulDiv(PRICE_SCALE, totalSupply()); // gross price after paying the fee
         emit FeeTaken(to, fee, highWaterMark);
