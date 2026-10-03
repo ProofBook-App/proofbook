@@ -15,4 +15,10 @@ interface IVenueAdapter {
     /// @notice Value the vault holds at this venue (margin balances, resting orders, positions
     /// at a conservative mark), in AUSD with 6 dp. Summed into the vault's NAV.
     function exposure(address vault) external view returns (uint256);
+
+    /// @notice False when exposure() is only a floor: a venue read failed or a price is stale, so
+    /// value the vault holds here is missing from NAV. The vault takes no deposits while any venue
+    /// is unreliable, so nobody can buy shares at the understated price (security review H1).
+    /// Withdrawals are unaffected (invariant 4).
+    function exposureReliable(address vault) external view returns (bool);
 }

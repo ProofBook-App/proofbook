@@ -27,6 +27,8 @@ interface IAgentVault {
     error VenueNotAllowed(address venue);
     error TradeTooLarge(uint256 notional, uint256 maxTradeNotional);
     error VaultFrozen();
+    /// @notice A venue's exposure is incomplete (stale price or failed read), so deposits pause.
+    error ExposureUnreliable();
     error DepositCapExceeded(address backer, uint256 attempted, uint256 cap);
     error UnfreezeCooldown(uint256 readyAt);
 

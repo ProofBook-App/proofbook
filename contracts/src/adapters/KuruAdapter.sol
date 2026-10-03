@@ -141,6 +141,13 @@ contract KuruAdapter is VaultBoundAdapter, IVenueAdapter {
         return _value(_mark());
     }
 
+    /// @inheritdoc IVenueAdapter
+    /// @dev False while the adapter holds MON and the reference is stale: exposure() then counts it as 0.
+    function exposureReliable(address vault_) external view returns (bool) {
+        if (vault_ != vault || vault_ == address(0)) return true;
+        return address(this).balance == 0 || _reference() != 0;
+    }
+
     /// @notice Price per MON (quote per base, 1e18-scaled) used to value held MON. 0 if no fresh reference.
     function markPrice() external view returns (uint256) {
         return _mark();

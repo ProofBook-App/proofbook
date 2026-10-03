@@ -11,6 +11,7 @@ import {MockAUSD} from "./MockAUSD.sol";
 /// setExposure() fakes value held at the venue (e.g. a position marked at a pushed Kuru mid).
 contract MockAdapter is IVenueAdapter {
     mapping(address vault => uint256) public exposureOf;
+    mapping(address vault => bool) public unreliable;
 
     function quoteNotional(bytes calldata data) external pure returns (uint256 notional) {
         (notional,) = abi.decode(data, (uint256, int256));
@@ -29,5 +30,14 @@ contract MockAdapter is IVenueAdapter {
 
     function setExposure(address vault, uint256 value) external {
         exposureOf[vault] = value;
+    }
+
+    function exposureReliable(address vault) external view returns (bool) {
+        return !unreliable[vault];
+    }
+
+    /// @dev Fakes a stale price or failed read at the venue (deposits should pause).
+    function setUnreliable(address vault, bool value) external {
+        unreliable[vault] = value;
     }
 }

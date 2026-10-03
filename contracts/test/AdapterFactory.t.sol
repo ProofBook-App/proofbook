@@ -45,6 +45,10 @@ contract DrainingAdapter is IVenueAdapter {
     function exposure(address vault) external view returns (uint256) {
         return taken[vault];
     }
+
+    function exposureReliable(address) external pure returns (bool) {
+        return true;
+    }
 }
 
 /// @notice AdapterFactory and the registry's adapter check (C1). Runs without a fork: the real

@@ -177,11 +177,25 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         return _venues;
     }
 
+    /// @notice True when every venue's exposure is complete. While one isn't (a stale price, a
+    /// failed read), NAV understates the vault and deposits pause (security review H1). A venue
+    /// whose check reverts counts as unreliable.
+    function venuesReliable() public view returns (bool) {
+        for (uint256 i; i < _venues.length; ++i) {
+            try IVenueAdapter(_venues[i]).exposureReliable(address(this)) returns (bool ok) {
+                if (!ok) return false;
+            } catch {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // ------------------------------------------------------------------ ERC-4626 limits
 
     /// @dev The cap applies to the receiver's position value after the deposit.
     function maxDeposit(address receiver) public view override returns (uint256) {
-        if (frozen) return 0;
+        if (frozen || !venuesReliable()) return 0;
         uint256 held = _convertToAssets(balanceOf(receiver), Math.Rounding.Ceil);
         return held >= depositCapPerBacker ? 0 : depositCapPerBacker - held;
     }
@@ -209,6 +223,7 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
 
     function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256 shares) {
         if (frozen) revert VaultFrozen();
+        if (!venuesReliable()) revert ExposureUnreliable();
         _takeFee();
         _checkCap(receiver, assets);
         shares = previewDeposit(assets);
@@ -218,6 +233,7 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
 
     function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256 assets) {
         if (frozen) revert VaultFrozen();
+        if (!venuesReliable()) revert ExposureUnreliable();
         _takeFee();
         assets = previewMint(shares);
         _checkCap(receiver, assets);

@@ -22,7 +22,17 @@ C1 was confirmed by hand afterwards (`AgentRegistry._validate` and `AgentVault.e
 
 **H1. Discount deposits while a venue reads as 0** (`KuruAdapter.sol:209-241`, `PerplAdapter.sol:179-195`, `AgentVault.sol:210-217`). When the Kuru reference is stale (both oracle and mark over 5 minutes old) held MON counts as 0. When Perpl's account or position read reverts, the Perpl leg counts as 0. Deposits stay open in both cases. With 5,000 idle and 5,000 in MON, NAV reads 5,000. An attacker deposits 5,000 for half the shares, waits for the reference to refresh (NAV 15,000), and withdraws 7,500, taking 2,500 from backers. Needs a test. Fix: block deposits (and `maxDeposit` → 0) whenever a venue reports its exposure as stale or unreadable.
 
+- **Fix drafted, not deployed (2026-10-03):**
+  - `IVenueAdapter.exposureReliable(vault)`: PerplAdapter returns false when the account or a tracked position can't be read; KuruAdapter returns false while it holds MON and the reference is stale.
+  - `AgentVault.venuesReliable()` is false if any venue says so, or if its check reverts. While it's false, `maxDeposit`/`maxMint` return 0 and `deposit`/`mint` revert with `ExposureUnreliable`. Withdrawals are unchanged.
+  - Tests: `test/StaleAndFrozen.t.sol`, including the review's 5,000 + 5,000 scenario, real Perpl and Kuru adapters, and withdrawals during the pause.
+
 **H2. A freeze doesn't stop resting Perpl orders** (`PerplAdapter.sol:153-157`, `AgentVault.sol:93`). Post-only orders with no expiry stay live after a freeze and can fill. Nobody can cancel them: `execute` is blocked and `recall` only withdraws free margin. Positions need the owner to unfreeze (24 h) and the session key to close them. Needs a test. Fix: allow `Cancel` while frozen, add a guardian reduce-only close inside the 3% band, and optionally require IOC/FOK or a bounded expiry.
+
+- **Fix drafted, not deployed (2026-10-03):**
+  - `PerplAdapter.cancel(perpId, orderId)`: anyone may cancel a resting order while the vault is frozen. It emits `OrderSent` with orderType Cancel, so the indexer needs no change.
+  - Every open or close order must expire within `MAX_ORDER_BLOCKS` (6,000 blocks, about 30 minutes at 300 ms; `OrderExpiryTooFar` otherwise). So an order the agent placed before a freeze is gone within half an hour even if nobody cancels it. The house agents and the CLI use 1,000 blocks.
+  - Not done: a guardian reduce-only close, so open positions still wait for the owner to unfreeze.
 
 ## Medium
 

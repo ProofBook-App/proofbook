@@ -41,6 +41,9 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     uint8 internal constant CANCEL = 4;
 
     uint256 public constant BAND_BPS = 300;
+    /// @notice Every open and close order must expire within this many blocks (about 30 minutes at
+    /// 300 ms), so nothing rests on the book for long after a freeze (security review H2).
+    uint256 public constant MAX_ORDER_BLOCKS = 6_000;
     uint256 internal constant BPS = 10_000;
 
     IPerplExchange public immutable exchange;
@@ -76,6 +79,7 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     error OrderTypeNotAllowed(uint8 orderType);
     error PriceOutsideBand(uint256 limitPNS, uint256 markPNS);
     error TooManyPerps(uint256 perpId);
+    error OrderExpiryTooFar(uint256 expiryBlock, uint256 latest);
 
     constructor(IPerplExchange exchange_, IERC20 collateral_) VaultBoundAdapter(collateral_) {
         (,,, uint256 decimals, address token,) = exchange_.getExchangeInfo();
@@ -143,7 +147,16 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     /// readable so backers can still withdraw what is idle (invariant 4).
     function exposure(address vault_) external view returns (uint256) {
         if (vault_ != vault || vault_ == address(0)) return 0;
-        return _equity();
+        (uint256 total,) = _equityChecked();
+        return total;
+    }
+
+    /// @inheritdoc IVenueAdapter
+    /// @dev False when the account or a tracked position can't be read, so exposure() left it out.
+    function exposureReliable(address vault_) external view returns (bool) {
+        if (vault_ != vault || vault_ == address(0)) return true;
+        (, bool ok) = _equityChecked();
+        return ok;
     }
 
     // ------------------------------------------------------------------ frozen-vault exit
@@ -156,6 +169,20 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
         emit Recalled(v, msg.sender, amountCNS);
     }
 
+    /// @notice While the vault is frozen, anyone may cancel a resting order on a tracked perp. A
+    /// freeze stops execute, so without this an order the agent left on the book could still fill
+    /// and open a position in a frozen vault (security review H2). Cancelling only removes risk.
+    /// Emits OrderSent with orderType Cancel and notional 0, like an agent's own cancel.
+    function cancel(uint256 perpId, uint256 orderId) external {
+        address v = _onlyFrozenVault();
+        IPerplExchange.OrderDesc memory d;
+        d.perpId = perpId;
+        d.orderType = CANCEL;
+        d.orderId = orderId;
+        IPerplExchange.OrderSignature memory sig = exchange.execOrder(d);
+        emit OrderSent(v, perpId, CANCEL, sig.orderId, 0, 0, 0, 0);
+    }
+
     // ------------------------------------------------------------------ internals
 
     function _withdrawTo(address v, uint256 amountCNS) internal {
@@ -166,6 +193,8 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     function _orderNotional(IPerplExchange.OrderDesc memory d) internal view returns (uint256) {
         if (d.orderType == CANCEL) return 0;
         if (d.orderType > CLOSE_SHORT) revert OrderTypeNotAllowed(d.orderType);
+        uint256 latest = block.number + MAX_ORDER_BLOCKS;
+        if (d.expiryBlock == 0 || d.expiryBlock > latest) revert OrderExpiryTooFar(d.expiryBlock, latest);
         IPerplExchange.PerpetualInfo memory p = exchange.getPerpetualInfo(d.perpId);
         bool isBuy = d.orderType == OPEN_LONG || d.orderType == CLOSE_SHORT;
         if (isBuy ? d.pricePNS * BPS > p.markPNS * (BPS + BAND_BPS) : d.pricePNS * BPS < p.markPNS * (BPS - BAND_BPS)) {
@@ -177,12 +206,18 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     }
 
     function _equity() internal view returns (uint256 total) {
+        (total,) = _equityChecked();
+    }
+
+    /// @dev Equity, and whether every read succeeded. A failed read leaves that part out (counts 0).
+    function _equityChecked() internal view returns (uint256 total, bool ok) {
         total = collateral.balanceOf(address(this));
-        if (accountId == 0) return total;
+        ok = true;
+        if (accountId == 0) return (total, ok);
         try exchange.getAccountByAddr(address(this)) returns (IPerplExchange.AccountInfo memory a) {
             total += a.balanceCNS;
         } catch {
-            return total;
+            return (total, false);
         }
         for (uint256 i; i < _perps.length; ++i) {
             try exchange.getPosition(_perps[i], accountId) returns (
@@ -190,7 +225,9 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
             ) {
                 int256 value = int256(pos.depositCNS) + pos.pnlCNS;
                 if (value > 0) total += uint256(value);
-            } catch {}
+            } catch {
+                ok = false;
+            }
         }
     }
 

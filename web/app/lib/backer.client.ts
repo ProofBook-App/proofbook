@@ -73,6 +73,8 @@ export const vaultAbi = parseAbi([
   "function withdraw(uint256 assets, address receiver, address owner) returns (uint256)",
   "function redeem(uint256 shares, address receiver, address owner) returns (uint256)",
   "error VaultFrozen()",
+  "error ExposureUnreliable()",
+  "function venuesReliable() view returns (bool)",
   "error DepositCapExceeded(address backer, uint256 attempted, uint256 cap)",
   "error ERC4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max)",
   "error ERC4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max)",
@@ -297,6 +299,8 @@ export type Position = {
   maxWithdraw: bigint;
   cap: bigint;
   frozen: boolean;
+  /** False while a venue can't be priced (stale price, failed read): the vault pauses deposits. */
+  reliable: boolean;
 };
 
 export async function readPosition(chainId: number, ref: VaultRef, who: Address): Promise<Position> {
@@ -314,7 +318,9 @@ export async function readPosition(chainId: number, ref: VaultRef, who: Address)
     client.readContract({ ...v, functionName: "frozen" }),
   ]);
   const value = shares === 0n ? 0n : await client.readContract({ ...v, functionName: "convertToAssets", args: [shares] });
-  return { mon, wallet, allowance, shares, value, maxDeposit, maxWithdraw, cap, frozen };
+  // Vaults from before the H1 fix have no venuesReliable(); they never pause deposits.
+  const reliable = await client.readContract({ ...v, functionName: "venuesReliable" }).catch(() => true);
+  return { mon, wallet, allowance, shares, value, maxDeposit, maxWithdraw, cap, frozen, reliable };
 }
 
 export async function assetDecimals(chainId: number, asset: Address) {
@@ -389,6 +395,8 @@ export function explain(error: unknown): string {
   switch (name) {
     case "VaultFrozen":
       return "The vault is frozen, so it takes no new deposits. Withdrawals still work.";
+    case "ExposureUnreliable":
+      return "Deposits are paused while one of the agent's venues can't be priced. Withdrawals still work. Try again in a few minutes.";
     case "DepositCapExceeded":
       return "That would take you over the per-backer deposit cap.";
     case "ERC4626ExceededMaxWithdraw":

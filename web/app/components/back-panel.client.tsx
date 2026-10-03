@@ -332,6 +332,8 @@ export default function BackPanel(props: BackPanelProps) {
                 note={
                   p.frozen
                     ? "The vault is frozen, so it takes no deposits. Withdrawals still work."
+                    : !p.reliable
+                      ? "Deposits are paused while one of the agent's venues can't be priced (a stale price or a failed read), so the vault's value is understated. Withdrawals still work."
                     : `Cap per backer: ${formatUnits(p.cap, d)} ${sym}. You can add ${formatUnits(p.maxDeposit, d)} more.`
                 }
                 onSubmit={(amount) =>
