@@ -25,7 +25,7 @@ interface IAgentRegistry {
     error UnknownAdapter(address venue);
 
     /// @notice Enter an ERC-8004 agent into Proofbook and deploy its vault on `asset`.
-    /// Caller must pass IdentityRegistry.isAuthorizedOrOwner(msg.sender, agentId).
+    /// Caller must be IdentityRegistry.ownerOf(agentId); an approved operator is refused.
     /// `asset` must be registry-allowlisted: AUSD (default, Perpl) or USDC (Kuru MON-USDC).
     function enter(uint256 agentId, RiskEnvelope calldata envelope, address sessionKey, IERC20 asset)
         external

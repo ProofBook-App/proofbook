@@ -176,8 +176,7 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
     /// struct shape, say) counts as 0 instead of reverting nav(), so withdrawals keep working
     /// (invariant 4; security review M2). venuesReliable() then reports the venue as unreliable.
     function _exposureOf(address venue) internal view returns (uint256 value, bool ok) {
-        (bool success, bytes memory ret) =
-            venue.staticcall(abi.encodeCall(IVenueAdapter.exposure, (address(this))));
+        (bool success, bytes memory ret) = venue.staticcall(abi.encodeCall(IVenueAdapter.exposure, (address(this))));
         if (!success || ret.length < 32) return (0, false);
         return (abi.decode(ret, (uint256)), true);
     }
@@ -357,7 +356,17 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         if (_currentDay != 0) dayStartNav += assets;
     }
 
+    /// A withdrawal scales the baseline by the share of NAV that stayed, so the day's loss in percent
+    /// is unchanged (security review L2). Subtracting the amount instead let a withdrawal after a gain
+    /// push the floor to almost 0. While a venue can't be priced NAV reads low, which would shrink the
+    /// baseline too far, so it falls back to subtracting.
     function _onOutflow(uint256 assets) internal {
-        if (_currentDay != 0) dayStartNav = assets >= dayStartNav ? 0 : dayStartNav - assets;
+        if (_currentDay == 0 || assets == 0) return;
+        if (!venuesReliable()) {
+            dayStartNav = assets >= dayStartNav ? 0 : dayStartNav - assets;
+            return;
+        }
+        uint256 navAfter = nav();
+        dayStartNav = dayStartNav.mulDiv(navAfter, navAfter + assets, Math.Rounding.Ceil);
     }
 }

@@ -47,9 +47,11 @@ C1 was confirmed by hand afterwards (`AgentRegistry._validate` and `AgentVault.e
 ## Low
 
 - **L1.** The deposit cap is per address. Shares are transferable, so two addresses or a share transfer get around it.
-- **L2.** A withdrawal after an intraday gain lowers `dayStartNav` by the absolute amount (`AgentVault.sol:307-309`). Example: start 1,000, NAV 2,000, withdraw 999: the floor drops to 0.9. Fix: scale it proportionally. Needs a test.
+- **L2.** A withdrawal after an intraday gain lowers `dayStartNav` by the absolute amount (`AgentVault.sol:307-309`). Example: start 1,000, NAV 2,000, withdraw 999: the floor drops to 0.9. Fix: scale it proportionally.
+  - **Fix drafted, not deployed (2026-10-03):** a withdrawal (and a paid fee) scales `dayStartNav` by the share of NAV that stayed, so the day's gain or loss in percent doesn't change. In the review's case the baseline becomes 450.5 instead of 0. It also stops a withdrawal during a loss from making the loss look bigger (down 5% stayed 5%, where subtracting made it 9.5%). While a venue can't be priced NAV reads low, so it falls back to subtracting. Deposits still add the amount. Tests: `test/BaselineAndEntry.t.sol`.
 - **L3.** Anyone can crystallise the fee at a mark peak with `withdraw(0, x, x)`.
 - **L4.** An approved ERC-721 operator can `enter` someone else's identity first, with an envelope nobody can change (`AgentRegistry.sol:41`). Require `ownerOf == msg.sender`.
+  - **Fix drafted, not deployed (2026-10-03):** `enter` requires `identity.ownerOf(agentId) == msg.sender`; approved addresses and operators get `NotAgentOwner`. Tests: `test/BaselineAndEntry.t.sol`.
 - **L5.** Perpl orders check the 3% band against a mark with no freshness check (`PerplAdapter.sol:169-173`).
 - **L6.** The vault's `receive()` (`AgentVault.sol:86`) isn't needed, and MON sent to it is stuck.
 - **L7.** `dailyLossCapBps = 10000` is accepted (a floor of 0, so no freeze), and `maxTradeNotional` has no upper bound.

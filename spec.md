@@ -67,7 +67,7 @@ Own matching engine, own perp, strategy tooling for builders, mobile app, ML-bas
 ## 5. Contracts
 
 ### AgentRegistry
-- `enter(agentId, riskEnvelope, sessionKey) -> vault`: the builder first registers with the canonical ERC-8004 IdentityRegistry, and `enter` checks `isAuthorizedOrOwner(msg.sender, agentId)`, then deploys and links the vault (once per agent). See `docs/reference/erc-8004.md`.
+- `enter(agentId, riskEnvelope, sessionKey) -> vault`: the builder first registers with the canonical ERC-8004 IdentityRegistry, and `enter` checks `ownerOf(agentId) == msg.sender` (operators refused, security review L4), then deploys and links the vault (once per agent). See `docs/reference/erc-8004.md`.
 - `envelopeOf(agentId)`, `ownerOf(agentId)` (live IdentityRegistry owner), `vaultOf(agentId)`
 - Events: `AgentRegistered`, `VaultLinked`
 

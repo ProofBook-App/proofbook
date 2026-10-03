@@ -45,7 +45,9 @@ contract AgentRegistry is IAgentRegistry {
         external
         returns (address vault)
     {
-        if (!identity.isAuthorizedOrOwner(msg.sender, agentId)) revert NotAgentOwner(agentId, msg.sender);
+        // The owner only: an approved operator could otherwise enter someone else's identity first,
+        // with an envelope nobody can change (security review L4).
+        if (identity.ownerOf(agentId) != msg.sender) revert NotAgentOwner(agentId, msg.sender);
         if (vaultOf[agentId] != address(0)) revert AlreadyEntered(agentId);
         if (!isAllowedAsset[asset]) revert AssetNotAllowed(address(asset));
         _validate(envelope);
