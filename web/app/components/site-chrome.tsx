@@ -56,7 +56,7 @@ const APP_LINKS = [
 
 export function Nav({ cta = { label: "Join the waitlist", href: "#join" } }: { cta?: { label: string; href: string } }) {
   const ctaClass =
-    "inline-flex h-10 items-center gap-2 rounded-lg bg-brass px-4 text-[14px] whitespace-nowrap font-medium text-ink transition-colors hover:bg-brass-hover";
+    "inline-flex h-11 items-center gap-2 rounded-lg bg-brass px-4 text-[14px] whitespace-nowrap font-medium text-ink transition-colors hover:bg-brass-hover";
   return (
     <>
       {/* The safe-area offset keeps the pill below the iOS status bar in the installed app. */}
@@ -174,7 +174,7 @@ export function Footer({
                 {c.links.map((l) => (
                   <li key={l.label}>
                     {l.href ? (
-                      <a href={l.href} className="transition-colors hover:text-ink">
+                      <a href={l.href} className="-my-[11px] inline-block py-[11px] transition-colors hover:text-ink">
                         {l.label}
                       </a>
                     ) : (
