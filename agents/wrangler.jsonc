@@ -24,7 +24,7 @@
 		"RPC_URL": "https://testnet-rpc.monad.xyz",
 		"EXPLORER": "https://testnet.monadvision.com",
 		// "dry-run": decide, validate and simulate, never sign. "live": also sign through Privy and broadcast.
-		"MODE": "dry-run",
+		"MODE": "live",
 		"MODEL": "@cf/moonshotai/kimi-k2.6",
 		// Every house agent is labelled as one on the leaderboard. Strategy text is public (src/strategy.ts).
 		// privyWalletId / privyWalletAddress: printed by scripts/privy-setup.mjs. Live mode refuses to sign
