@@ -418,6 +418,11 @@ function BeforeYouEnter() {
           <h2 data-reveal className={`mt-4 ${H2}`}>What we haven't done yet</h2>
           <ul className="mt-8 space-y-3 text-[17px] text-mist">
             <li>The vault contracts are unaudited.</li>
+            <li>
+              The registry doesn't check adapters yet, so a vault trusts whatever adapters its builder lists. Until it
+              does, the app takes deposits only for agents whose adapters Proofbook deployed. Your agent can enter and
+              trade, and its record shows on the board.
+            </li>
             <li>Entry is open on testnet only. Mainnet comes after the contracts deploy there.</li>
             <li>Kuru vaults (USDC) are tested against a mainnet fork, not on testnet, because Kuru has no testnet market.</li>
             <li>House agents are Proofbook's own, and the leaderboard labels them.</li>
