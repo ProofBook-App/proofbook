@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AdapterFactory} from "../../src/AdapterFactory.sol";
 import {AgentRegistry} from "../../src/AgentRegistry.sol";
 import {AgentVault} from "../../src/AgentVault.sol";
 import {KuruAdapter} from "../../src/adapters/KuruAdapter.sol";
@@ -138,9 +139,13 @@ contract SimKuruOrderBookTest is Test {
         MockIdentityRegistry identity = new MockIdentityRegistry();
         IERC20[] memory assets = new IERC20[](1);
         assets[0] = IERC20(address(usdc));
-        AgentRegistry registry = new AgentRegistry(identity, makeAddr("guardian"), assets);
         // The Kuru adapter's reference is the Perpl MON perp; here the mock source stands in for it.
-        KuruAdapter adapter = new KuruAdapter(book, IERC20(address(usdc)), IPerplExchange(address(source)), MON);
+        AdapterFactory factory = new AdapterFactory(
+            IPerplExchange(address(0)), IERC20(address(0)), book, IERC20(address(usdc)), IPerplExchange(address(source)), MON
+        );
+        AgentRegistry registry = new AgentRegistry(identity, makeAddr("guardian"), assets, factory);
+        factory.setRegistry(address(registry));
+        KuruAdapter adapter = KuruAdapter(payable(factory.deployKuru()));
         address[] memory venues = new address[](1);
         venues[0] = address(adapter);
         AgentVault vault = AgentVault(
@@ -153,7 +158,6 @@ contract SimKuruOrderBookTest is Test {
                     IERC20(address(usdc))
                 ))
         );
-        adapter.bind(address(vault));
 
         vm.startPrank(alice);
         usdc.faucet(alice, 1_000e6);

@@ -9,6 +9,7 @@ import {RiskEnvelope} from "../src/interfaces/IAgentRegistry.sol";
 import {MockAUSD} from "./mocks/MockAUSD.sol";
 import {MockIdentityRegistry} from "./mocks/MockIdentityRegistry.sol";
 import {MockAdapter} from "./mocks/MockAdapter.sol";
+import {MockAdapterFactory} from "./mocks/MockAdapterFactory.sol";
 
 /// @notice Shared local setup: mock AUSD and mock USDC (both 6 dp, both allowlisted), mock ERC-8004 registry, one mock venue.
 /// setUp must not touch unimplemented contract functions, so agents are entered per test via _enter().
@@ -21,6 +22,7 @@ abstract contract BaseTest is Test {
     MockAdapter internal venue;
     MockAdapter internal unlistedVenue;
     AgentRegistry internal registry;
+    MockAdapterFactory internal adapterFactory;
 
     address internal builder = makeAddr("builder");
     address internal sessionKey = makeAddr("sessionKey");
@@ -38,7 +40,10 @@ abstract contract BaseTest is Test {
         IERC20[] memory assets = new IERC20[](2);
         assets[0] = ausd;
         assets[1] = usdc;
-        registry = new AgentRegistry(identity, guardian, assets);
+        // The registry accepts only canonical adapters; the mock factory vouches for the mock venue.
+        adapterFactory = new MockAdapterFactory();
+        adapterFactory.allow(address(venue));
+        registry = new AgentRegistry(identity, guardian, assets, adapterFactory);
     }
 
     /// @dev 1,000 AUSD max trade, 10% daily loss cap, 10,000 AUSD per backer, one allowlisted venue.

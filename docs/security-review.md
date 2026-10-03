@@ -10,6 +10,13 @@ C1 was confirmed by hand afterwards (`AgentRegistry._validate` and `AgentVault.e
 
 - **Fix:** the registry deploys adapters through a factory with canonical immutables (this also closes the open "adapter binding" question), or an owner-curated adapter allowlist checked in `_validate`.
 - **Done now (web only):** `/agent/:id` turns deposits off and shows a warning for any agent whose adapters Proofbook hasn't verified. Today only Proofbook's own agents are verified.
+- **Fix drafted, not deployed (2026-10-03):**
+  - `contracts/src/AdapterFactory.sol` deploys PerplAdapter and KuruAdapter with the chain's canonical venue addresses, and is their only binder.
+  - `AgentRegistry` now takes the factory in its constructor. `_validate` rejects any venue the factory didn't deploy (`UnknownAdapter`), and `enter` binds each adapter to the new vault after its events.
+  - Tests: `test/AdapterFactory.t.sol` (12). It includes the drain itself against a registry without the check: the vault empties, NAV still reads 500, and it never freezes. All 52 local tests (the 30 invariant tests unchanged) and 38 mainnet-fork tests pass.
+  - `test/Base.t.sol` gets a `MockAdapterFactory` that vouches for the mock venue. `test_bind_isOneShotAndBinderOnly` now checks the factory as binder.
+  - The deploy scripts and `proofbook agent create` use the factory.
+  - Needs: the human's review, then a new testnet registry. Existing vaults keep the old registry.
 
 ## High
 

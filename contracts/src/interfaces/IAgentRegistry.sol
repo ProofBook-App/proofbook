@@ -21,6 +21,8 @@ interface IAgentRegistry {
     error AlreadyEntered(uint256 agentId);
     error InvalidEnvelope();
     error AssetNotAllowed(address asset);
+    /// @notice A venue that the registry's AdapterFactory didn't deploy.
+    error UnknownAdapter(address venue);
 
     /// @notice Enter an ERC-8004 agent into Proofbook and deploy its vault on `asset`.
     /// Caller must pass IdentityRegistry.isAuthorizedOrOwner(msg.sender, agentId).

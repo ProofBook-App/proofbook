@@ -3,13 +3,9 @@ pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AdapterFactory} from "../src/AdapterFactory.sol";
 import {AgentRegistry} from "../src/AgentRegistry.sol";
-import {KuruAdapter} from "../src/adapters/KuruAdapter.sol";
-import {PerplAdapter} from "../src/adapters/PerplAdapter.sol";
-import {VaultBoundAdapter} from "../src/adapters/VaultBoundAdapter.sol";
 import {RiskEnvelope} from "../src/interfaces/IAgentRegistry.sol";
-import {IKuruOrderBook} from "../src/interfaces/external/IKuruOrderBook.sol";
-import {IPerplExchange} from "../src/interfaces/external/IPerplExchange.sol";
 import {Chains} from "./Chains.sol";
 
 interface IIdentityRegister {
@@ -17,7 +13,8 @@ interface IIdentityRegister {
 }
 
 /// @notice Enters one house agent: register an ERC-8004 identity (minted to the broadcaster),
-/// deploy its venue adapter, enter it into Proofbook, bind the adapter to the new vault.
+/// deploy its venue adapter through the registry's AdapterFactory, enter it into Proofbook (the
+/// registry binds the adapter to the new vault).
 ///
 /// Env:
 ///   REGISTRY           AgentRegistry address
@@ -77,14 +74,10 @@ contract HouseAgent is Script {
 
         vm.startBroadcast();
         agentId = IIdentityRegister(c.identity).register(p.agentURI);
-        adapter = p.kuru
-            ? address(
-                new KuruAdapter(IKuruOrderBook(c.kuruMonUsdc), asset, IPerplExchange(c.perplExchange), c.perplMonPerpId)
-            )
-            : address(new PerplAdapter(IPerplExchange(c.perplExchange), asset));
+        AdapterFactory factory = AdapterFactory(address(p.registry.adapters()));
+        adapter = p.kuru ? factory.deployKuru() : factory.deployPerpl();
         venues[0] = adapter;
         vault = p.registry.enter(agentId, env, p.sessionKey, asset);
-        VaultBoundAdapter(adapter).bind(vault);
         vm.stopBroadcast();
 
         console2.log("agentId", agentId);

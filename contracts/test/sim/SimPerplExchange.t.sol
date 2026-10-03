@@ -3,10 +3,12 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AdapterFactory} from "../../src/AdapterFactory.sol";
 import {AgentRegistry} from "../../src/AgentRegistry.sol";
 import {AgentVault} from "../../src/AgentVault.sol";
 import {PerplAdapter} from "../../src/adapters/PerplAdapter.sol";
 import {RiskEnvelope} from "../../src/interfaces/IAgentRegistry.sol";
+import {IKuruOrderBook} from "../../src/interfaces/external/IKuruOrderBook.sol";
 import {IPerplExchange} from "../../src/interfaces/external/IPerplExchange.sol";
 import {SimPerplExchange} from "../../src/sim/SimPerplExchange.sol";
 import {SimToken} from "../../src/sim/SimToken.sol";
@@ -279,9 +281,13 @@ contract SimPerplExchangeTest is Test {
         MockIdentityRegistry identity = new MockIdentityRegistry();
         IERC20[] memory assets = new IERC20[](1);
         assets[0] = IERC20(address(token));
-        AgentRegistry registry = new AgentRegistry(identity, makeAddr("guardian"), assets);
+        AdapterFactory factory = new AdapterFactory(
+            IPerplExchange(address(ex)), IERC20(address(token)), IKuruOrderBook(address(0)), IERC20(address(0)), IPerplExchange(address(0)), 0
+        );
+        AgentRegistry registry = new AgentRegistry(identity, makeAddr("guardian"), assets, factory);
+        factory.setRegistry(address(registry));
 
-        PerplAdapter adapter = new PerplAdapter(IPerplExchange(address(ex)), IERC20(address(token)));
+        PerplAdapter adapter = PerplAdapter(factory.deployPerpl());
         address[] memory venues = new address[](1);
         venues[0] = address(adapter);
         AgentVault vault = AgentVault(
@@ -294,7 +300,6 @@ contract SimPerplExchangeTest is Test {
                     IERC20(address(token))
                 ))
         );
-        adapter.bind(address(vault));
 
         vm.startPrank(alice);
         token.faucet(alice, 1_000e6);

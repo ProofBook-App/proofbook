@@ -4,12 +4,14 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AdapterFactory} from "../../src/AdapterFactory.sol";
 import {AgentRegistry} from "../../src/AgentRegistry.sol";
 import {AgentVault} from "../../src/AgentVault.sol";
 import {PerplAdapter} from "../../src/adapters/PerplAdapter.sol";
 import {VaultBoundAdapter} from "../../src/adapters/VaultBoundAdapter.sol";
 import {IAgentVault} from "../../src/interfaces/IAgentVault.sol";
 import {RiskEnvelope} from "../../src/interfaces/IAgentRegistry.sol";
+import {IKuruOrderBook} from "../../src/interfaces/external/IKuruOrderBook.sol";
 import {IPerplExchange} from "../../src/interfaces/external/IPerplExchange.sol";
 import {MockIdentityRegistry} from "../mocks/MockIdentityRegistry.sol";
 
@@ -40,6 +42,7 @@ contract PerplAdapterForkTest is Test {
     address attacker = makeAddr("attacker");
 
     AgentRegistry registry;
+    AdapterFactory factory;
     AgentVault vault;
     PerplAdapter adapter;
 
@@ -49,10 +52,12 @@ contract PerplAdapterForkTest is Test {
         MockIdentityRegistry identity = new MockIdentityRegistry();
         IERC20[] memory assets = new IERC20[](1);
         assets[0] = AUSD;
-        registry = new AgentRegistry(identity, guardian, assets);
+        factory = new AdapterFactory(EX, AUSD, IKuruOrderBook(address(0)), IERC20(address(0)), EX, 10);
+        registry = new AgentRegistry(identity, guardian, assets, factory);
+        factory.setRegistry(address(registry));
 
         vm.startPrank(builder);
-        adapter = new PerplAdapter(EX, AUSD);
+        adapter = PerplAdapter(factory.deployPerpl());
         address[] memory venues = new address[](1);
         venues[0] = address(adapter);
         uint256 agentId = identity.register();
@@ -69,7 +74,6 @@ contract PerplAdapterForkTest is Test {
                     AUSD
                 ))
         );
-        adapter.bind(address(vault));
         vm.stopPrank();
 
         _dealAUSD(alice, 1_000e6);
@@ -135,8 +139,14 @@ contract PerplAdapterForkTest is Test {
     // ------------------------------------------------------------------ binding & access
 
     function test_bind_isOneShotAndBinderOnly() public {
-        vm.prank(builder);
+        // The factory is the binder of its adapters, and enter() already bound this one.
+        assertEq(adapter.binder(), address(factory));
+        assertEq(adapter.vault(), address(vault));
+        vm.prank(address(factory));
         vm.expectRevert(abi.encodeWithSelector(VaultBoundAdapter.AlreadyBound.selector, address(vault)));
+        adapter.bind(address(vault));
+        vm.prank(builder);
+        vm.expectRevert(abi.encodeWithSelector(VaultBoundAdapter.NotBinder.selector, builder));
         adapter.bind(address(vault));
 
         vm.prank(attacker);

@@ -12,11 +12,22 @@ export const registryAbi = parseAbi([
   "function ownerOf(uint256 agentId) view returns (address)",
   "function isAllowedAsset(address asset) view returns (bool)",
   "function guardian() view returns (address)",
+  // Registries from the C1 fix on (docs/security-review.md); older ones don't have it.
+  "function adapters() view returns (address)",
   "event VaultLinked(uint256 indexed agentId, address indexed vault, address indexed asset, address sessionKey)",
   "error NotAgentOwner(uint256 agentId, address caller)",
   "error AlreadyEntered(uint256 agentId)",
   "error InvalidEnvelope()",
   "error AssetNotAllowed(address asset)",
+  "error UnknownAdapter(address venue)",
+]);
+
+/** AdapterFactory: the only source of adapters a vault may list. The registry binds them in enter(). */
+export const factoryAbi = parseAbi([
+  "function deployPerpl() returns (address adapter)",
+  "function isCanonical(address adapter) view returns (bool)",
+  "event AdapterDeployed(address indexed adapter, uint8 kind, address indexed by)",
+  "error VenueNotConfigured()",
 ]);
 
 export const identityAbi = parseAbi([

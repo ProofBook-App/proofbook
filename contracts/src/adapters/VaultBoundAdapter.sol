@@ -9,9 +9,9 @@ import {IAgentVault} from "../interfaces/IAgentVault.sol";
 /// @notice Shared one-vault binding for venue adapters. Each adapter instance serves exactly one
 /// AgentVault and holds that vault's venue position.
 ///
-/// Lifecycle: deploy (the deployer becomes the binder) -> AgentRegistry.enter with the adapter in
-/// the envelope's venues -> bind(vault). A wrong or missing bind only disables the venue for the
-/// vault: nothing can reach the adapter's funding path except the bound vault.
+/// Lifecycle: AdapterFactory deploys it (the factory becomes the binder) -> AgentRegistry.enter
+/// lists it in the envelope's venues, checks the factory deployed it, and has the factory call
+/// bind(vault). Nothing can reach the adapter's funding path except the bound vault.
 abstract contract VaultBoundAdapter {
     /// @notice Token the bound vault must hold (the vault asset).
     IERC20 public immutable settlementToken;

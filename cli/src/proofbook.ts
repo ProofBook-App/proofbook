@@ -24,6 +24,7 @@ import {
 import {
   adapterCallParams,
   erc20Abi,
+  factoryAbi,
   faucetAbi,
   identityAbi,
   orderDescParams,
@@ -254,9 +255,22 @@ export class Proofbook {
 
   // ------------------------------------------------------------------ create
 
+  /** The registry's AdapterFactory, or undefined for a registry from before the C1 fix. */
+  async adapterFactory(): Promise<Address | undefined> {
+    try {
+      const f = await this.client.readContract({ address: this.registry, abi: registryAbi, functionName: "adapters" });
+      return f === zeroAddress ? undefined : f;
+    } catch {
+      return undefined;
+    }
+  }
+
   /**
    * Mirrors contracts/script/HouseAgent.s.sol: register an ERC-8004 identity (minted to the signer),
-   * deploy a PerplAdapter, enter the agent with its risk envelope, bind the adapter to the new vault.
+   * get a PerplAdapter, enter the agent with its risk envelope.
+   * With an AdapterFactory registry the adapter comes from factory.deployPerpl() and enter() binds
+   * it, so every step is a plain contract call (the mm signer can run all of it). Older registries
+   * (no factory) take the adapter deployed from bytecode and a separate bind.
    * `agentId` / `adapter` resume a run that stopped part-way.
    */
   async create(o: {
@@ -282,7 +296,8 @@ export class Proofbook {
     };
 
     // Everything that can be checked before the first transaction.
-    if (!o.adapter && !signer.canDeploy) {
+    const factory = await this.adapterFactory();
+    if (!factory && !o.adapter && !signer.canDeploy) {
       throw new Error(
         `The ${signer.kind} signer cannot deploy the PerplAdapter (contract creation). Nothing was sent. See the plugin README ("Known gaps").`,
       );
@@ -313,7 +328,21 @@ export class Proofbook {
     }
 
     let adapter = o.adapter;
-    if (!adapter) {
+    if (factory && !adapter) {
+      const r = await this.write(
+        "deployPerpl",
+        { address: factory, abi: factoryAbi, functionName: "deployPerpl", args: [] },
+        `Deploy a Proofbook PerplAdapter for agent #${agentId} from the AdapterFactory`,
+      );
+      sent.push(r.sent);
+      const [ev] = parseEventLogs({ abi: factoryAbi, eventName: "AdapterDeployed", logs: r.receipt.logs });
+      if (!ev) throw new Error("deployPerpl: no AdapterDeployed event in the receipt.");
+      adapter = getAddress(ev.args.adapter);
+      this.log({ event: "deployed", adapter });
+    } else if (factory && adapter) {
+      const canonical = await this.client.readContract({ address: factory, abi: factoryAbi, functionName: "isCanonical", args: [adapter] });
+      if (!canonical) throw new Error(`Adapter ${adapter} was not deployed by the registry's AdapterFactory ${factory}.`);
+    } else if (!adapter) {
       const data = encodeDeployData({
         abi: perplAdapterAbi,
         bytecode: perplAdapterBytecode,
@@ -325,6 +354,7 @@ export class Proofbook {
       adapter = getAddress(r.receipt.contractAddress);
       this.log({ event: "deployed", adapter });
     } else {
+      // Older registry, adapter given: only its deployer can bind it.
       const binder = await this.client.readContract({ address: adapter, abi: perplAdapterAbi, functionName: "binder" });
       if (binder.toLowerCase() !== me.toLowerCase()) {
         throw new Error(`Adapter ${adapter} was deployed by ${binder}; only that address can bind it.`);
@@ -351,8 +381,9 @@ export class Proofbook {
       this.log({ event: "entered", vault });
     }
 
+    // A factory registry binds inside enter(); an older one needs the deployer to bind.
     const bound = await this.client.readContract({ address: adapter, abi: perplAdapterAbi, functionName: "vault" });
-    if (bound === zeroAddress) {
+    if (!factory && bound === zeroAddress) {
       const r = await this.write(
         "bind",
         { address: adapter, abi: perplAdapterAbi, functionName: "bind", args: [vault] },
