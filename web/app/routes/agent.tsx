@@ -430,6 +430,7 @@ function Back({ d }: { d: Data }) {
         asset={a.asset}
         symbol={assetSymbol(d.chainId, a.asset)}
         drip={d.drip}
+        verified={a.house}
       />
     </Suspense>
   );

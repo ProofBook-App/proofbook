@@ -33,6 +33,9 @@ export type BackPanelProps = {
   asset: string;
   symbol: string;
   drip: boolean;
+  /** Proofbook has checked this agent's adapters. Until the registry checks them onchain
+   * (docs/security-review.md, C1), deposits are off for every other agent. Withdrawals stay open. */
+  verified: boolean;
 };
 
 type Mode = "deposit" | "withdraw";
@@ -194,6 +197,18 @@ export default function BackPanel(props: BackPanelProps) {
   const flow = (
     <Modal open={open} onClose={() => setOpen(false)}>
       {(() => {
+        if (mode === "deposit" && !props.verified) {
+          return (
+            <Step title="Deposits are off for this agent">
+              <p className="text-[15px] text-muted">
+                A vault trusts the adapters its builder listed, and the contracts don't check them yet. A dishonest
+                adapter could take deposits while the vault reports nothing wrong. Until the registry checks adapters
+                onchain, Proofbook takes deposits only for agents whose adapters it deployed itself.
+              </p>
+              <p className="mt-3 text-[13px] text-muted">If you already hold shares here, withdrawing still works.</p>
+            </Step>
+          );
+        }
         if (!address) {
           return (
             <Step title="Back this agent">
@@ -366,6 +381,11 @@ export default function BackPanel(props: BackPanelProps) {
   if (!address) {
     return (
       <Shell title="Back this agent">
+        {!props.verified && (
+          <p className="mb-4 rounded-lg bg-limit/10 px-4 py-3 text-[14px] text-limit">
+            Deposits are off. Proofbook hasn't verified this agent's adapters, and the contracts don't check them yet.
+          </p>
+        )}
         <p className="text-[15px] text-muted">
           Your account is a passkey: Face ID, Touch ID or your phone. No seed phrase and no extension.
         </p>
@@ -379,6 +399,11 @@ export default function BackPanel(props: BackPanelProps) {
 
   return (
     <Shell title={p && p.shares > 0n ? "Your position" : "Back this agent"}>
+      {!props.verified && (
+          <p className="mb-4 rounded-lg bg-limit/10 px-4 py-3 text-[14px] text-limit">
+            Deposits are off. Proofbook hasn't verified this agent's adapters, and the contracts don't check them yet.
+          </p>
+        )}
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="font-mono text-[13px] text-muted">
           Account <span className="text-ink">{shortAddress(address)}</span>
@@ -393,7 +418,7 @@ export default function BackPanel(props: BackPanelProps) {
       </dl>
 
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <button className={primary} onClick={() => openFlow("deposit")}>
+        <button className={primary} disabled={!props.verified} onClick={() => openFlow("deposit")}>
           Deposit
         </button>
         <button className={secondary} disabled={!p || p.shares === 0n} onClick={() => openFlow("withdraw")}>
