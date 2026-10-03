@@ -374,7 +374,13 @@ export async function readBacker(env: SnapshotEnv, account: string, limit = 20) 
           .all<PositionRow>()
       ).results.map((r) => ({ vault: r.vault, ...toPosition(r) }))
     : [];
-  return { ...board, account, history, positions };
+  // The latest decision of each house agent this account backs (the proofbook-agents log).
+  const held = new Set(vaults.map((v) => v.toLowerCase()));
+  const houses = board.agents.filter((a) => a.house && held.has(a.vault.toLowerCase()));
+  const decisions = Object.fromEntries(
+    await Promise.all(houses.map(async (a) => [a.agentId, (await readDecisions(env, a.agentId, 0))?.latest ?? null] as const)),
+  );
+  return { ...board, account, history, positions, decisions };
 }
 
 export type Decision = {

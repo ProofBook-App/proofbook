@@ -29,6 +29,7 @@ type Backer = {
     Flow: { id: string; kind: string; vault_id: string; assets: string; timestamp: number; txHash: string }[];
     Trade: { id: string; vault_id: string; kind: string; notional: string; timestamp: number; txHash: string }[];
   } | null;
+  decisions?: Record<string, { at: number; mode: string; action: string; reason: string | null; tx_hash: string | null } | null>;
   positions: {
     id: string;
     vault: string;
@@ -297,6 +298,7 @@ export default function PortfolioView({ chainId, drip }: { chainId: number; drip
                   net={netOf(r)}
                   decimals={decimals}
                   positions={data?.positions.filter((p) => same(p.vault, r.agent.vault)) ?? []}
+                  decision={data?.decisions?.[r.agent.agentId] ?? null}
                 />
               ))}
             </ul>
@@ -331,6 +333,7 @@ function HoldingRow(props: {
   net: bigint | null;
   decimals: number;
   positions: Backer["positions"];
+  decision: NonNullable<Backer["decisions"]>[string];
 }) {
   const { agent: a, h, decimals: d } = props;
   const sym = assetSymbol(props.chainId, a.asset);
@@ -381,6 +384,11 @@ function HoldingRow(props: {
             })}
           </ul>
         </div>
+      )}
+      {props.decision?.reason && (
+        <p className="border-t border-line px-4 py-3 text-[13px] text-muted">
+          <span className="text-ink">Its last decision, {formatTime(props.decision.at)}:</span> {props.decision.reason}
+        </p>
       )}
       {atVenue > 0n && (
         <p className="border-t border-line px-4 py-3 text-[13px] text-muted">
