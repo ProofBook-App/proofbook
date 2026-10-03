@@ -381,7 +381,7 @@ function Decisions({ d }: { d: Data }) {
                 {t.size && t.action.startsWith("open") && ` ${t.size} ${assetSymbol(d.chainId, d.agent.asset)}`}
               </p>
               <p className="text-[13px] text-muted">
-                {t.error ? `Not sent: ${shortError(t.error)}.` : t.reason} {formatTime(t.at)}.{" "}
+                {t.reason} {formatTime(t.at)}.{" "}
                 {t.tx_hash && <ExtLink href={txUrl(d.chainId, t.tx_hash)}>Transaction</ExtLink>}
               </p>
             </li>
@@ -390,10 +390,16 @@ function Decisions({ d }: { d: Data }) {
       ) : (
         <p className="mt-4 text-[15px] text-muted">No live trades yet.</p>
       )}
+      {log.unsent > 0 && log.lastUnsent?.error && (
+        <p className="mt-3 text-[13px] text-muted">
+          {log.unsent} {log.unsent === 1 ? "decision was" : "decisions were"} checked but not sent. The latest, on{" "}
+          {formatTime(log.lastUnsent.at)}: {shortError(log.lastUnsent.error)}.
+        </p>
+      )}
       {log.since && (
         <p className="mt-3 font-mono text-[12px] text-muted">
-          {log.runs.toLocaleString("en-US")} live runs and {log.liveTrades} trades since {formatTime(log.since)}. Model{" "}
-          {latest.model}.
+          {log.runs.toLocaleString("en-US")} live runs and {log.liveTrades} trades since {formatTime(log.since)}
+          {log.rejected > 0 && `, ${log.rejected} rejected by the checks`}. Model {latest.model}.
         </p>
       )}
     </Card>

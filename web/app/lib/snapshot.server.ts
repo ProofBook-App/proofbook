@@ -403,23 +403,31 @@ export async function readDecisions(env: SnapshotEnv, agentId: string, limit = 1
   const chainId = Number(env.CHAIN_ID);
   const cols = `id, at, mode, model, action, size, valid, reason, tx_hash, error`;
   try {
-    const [latest, trades, counts] = await env.DB.batch([
+    const [latest, trades, counts, unsent] = await env.DB.batch([
       env.DB.prepare(`SELECT ${cols} FROM agent_decisions WHERE chain_id = ?1 AND agent_id = ?2 ORDER BY id DESC LIMIT 1`).bind(chainId, agentId),
       env.DB.prepare(
-        `SELECT ${cols} FROM agent_decisions WHERE chain_id = ?1 AND agent_id = ?2 AND mode = 'live' AND (tx_hash IS NOT NULL OR error IS NOT NULL)
+        `SELECT ${cols} FROM agent_decisions WHERE chain_id = ?1 AND agent_id = ?2 AND mode = 'live' AND tx_hash IS NOT NULL
          ORDER BY id DESC LIMIT ?3`,
       ).bind(chainId, agentId, limit),
+      // Counts include sends that failed after the checks (out of gas, RPC down) and decisions the checks rejected.
       env.DB.prepare(
-        `SELECT COUNT(*) AS runs, SUM(tx_hash IS NOT NULL) AS trades, MIN(at) AS since FROM agent_decisions
-         WHERE chain_id = ?1 AND agent_id = ?2 AND mode = 'live'`,
+        `SELECT COUNT(*) AS runs, SUM(tx_hash IS NOT NULL) AS trades, SUM(error LIKE 'send failed%') AS unsent, SUM(valid = 0 AND error NOT LIKE 'send failed%') AS rejected,
+                MIN(at) AS since FROM agent_decisions WHERE chain_id = ?1 AND agent_id = ?2 AND mode = 'live'`,
+      ).bind(chainId, agentId),
+      env.DB.prepare(
+        `SELECT ${cols} FROM agent_decisions WHERE chain_id = ?1 AND agent_id = ?2 AND mode = 'live' AND error LIKE 'send failed%'
+         ORDER BY id DESC LIMIT 1`,
       ).bind(chainId, agentId),
     ]);
-    const c = counts.results[0] as { runs: number; trades: number | null; since: number | null };
+    const c = counts.results[0] as { runs: number; trades: number | null; unsent: number | null; rejected: number | null; since: number | null };
     return {
       latest: (latest.results[0] as Decision | undefined) ?? null,
       trades: trades.results as Decision[],
       runs: c.runs,
       liveTrades: c.trades ?? 0,
+      unsent: c.unsent ?? 0,
+      rejected: c.rejected ?? 0,
+      lastUnsent: (unsent.results[0] as Decision | undefined) ?? null,
       since: c.since,
     };
   } catch {

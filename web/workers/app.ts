@@ -13,11 +13,12 @@ declare module "react-router" {
 // 'unsafe-inline'; frame-ancestors stops the passkey flow being framed by another site.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  // Cloudflare Web Analytics injects its beacon into every page and reports to cloudflareinsights.com.
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self' https://rpc.monad.xyz https://testnet-rpc.monad.xyz",
+  "connect-src 'self' https://rpc.monad.xyz https://testnet-rpc.monad.xyz https://cloudflareinsights.com",
   "manifest-src 'self'",
   "worker-src 'self'",
   "frame-ancestors 'none'",
