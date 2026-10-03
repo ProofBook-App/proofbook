@@ -6,7 +6,7 @@
 // Testnet only: it refuses on any other chain, and it's off unless the DRIP_PK secret is set.
 // The key is a throwaway testnet wallet, never the deployer or a mainnet key.
 
-import { createPublicClient, createWalletClient, getAddress, http, isAddress, parseAbi, parseEther, type Hash } from "viem";
+import { createPublicClient, createWalletClient, fallback, getAddress, http, isAddress, parseAbi, parseEther, type Hash } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ausdAddress, ausdFaucet } from "./chains";
 import { chainFor } from "./chain";
@@ -37,7 +37,13 @@ export function dripEnabled(env: Env) {
   return Number(env.CHAIN_ID) === TESTNET && Boolean((env as DripEnv).DRIP_PK);
 }
 
-type DripEnv = Env & { DRIP_PK?: string };
+type DripEnv = Env & { DRIP_PK?: string; ALCHEMY_RPC_URL?: string };
+
+// Alchemy first when its secret is set, then the chain's public RPC.
+function transport(env: Env) {
+  const alchemy = (env as DripEnv).ALCHEMY_RPC_URL;
+  return alchemy ? fallback([http(alchemy), http()]) : http();
+}
 
 export async function drip(env: Env, rawAddress: unknown, ip: string | null, asset: string): Promise<DripResult> {
   const chainId = Number(env.CHAIN_ID);
@@ -64,9 +70,9 @@ export async function drip(env: Env, rawAddress: unknown, ip: string | null, ass
   }
 
   const chain = chainFor(chainId);
-  const client = createPublicClient({ chain, transport: http() });
+  const client = createPublicClient({ chain, transport: transport(env) });
   const account = privateKeyToAccount(pk as `0x${string}`);
-  const wallet = createWalletClient({ account, chain, transport: http() });
+  const wallet = createWalletClient({ account, chain, transport: transport(env) });
   const faucet = ausdFaucet(chainId) as `0x${string}`;
 
   const [mon, ausd, dripBalance] = await Promise.all([
@@ -145,12 +151,12 @@ export async function restockDrip(env: Env) {
   const token = ausdAddress(chainId) as `0x${string}` | undefined;
   if (chainId !== TESTNET || !pk || !token) return null;
   const chain = chainFor(chainId);
-  const client = createPublicClient({ chain, transport: http() });
+  const client = createPublicClient({ chain, transport: transport(env) });
   const account = privateKeyToAccount(pk as `0x${string}`);
   const stock = await client.readContract({ address: token, abi, functionName: "balanceOf", args: [account.address] });
   if (stock >= STOCK_TARGET) return { stock: stock.toString(), claimed: null };
   const faucet = ausdFaucet(chainId) as `0x${string}`;
-  const wallet = createWalletClient({ account, chain, transport: http() });
+  const wallet = createWalletClient({ account, chain, transport: transport(env) });
   try {
     const gas = await client.estimateContractGas({ account, address: faucet, abi, functionName: "requestFunds", args: [account.address] });
     const hash = await wallet.writeContract({ address: faucet, abi, functionName: "requestFunds", args: [account.address], gas: gas + gas / 20n });

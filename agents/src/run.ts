@@ -38,7 +38,7 @@ export async function runAgent(env: Env, cfg: Config, agent: HouseAgent) {
     return summary;
   };
 
-  const client = clientFor(cfg.chainId, cfg.rpc);
+  const client = clientFor(cfg.chainId, cfg.rpcs);
   let obs: Observation;
   try {
     obs = await observe(client, cfg.chainId, agent);

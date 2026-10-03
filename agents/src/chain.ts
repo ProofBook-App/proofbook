@@ -4,6 +4,7 @@ import {
   BaseError,
   ContractFunctionRevertedError,
   createPublicClient,
+  fallback,
   defineChain,
   http,
   parseAbi,
@@ -70,7 +71,9 @@ const PERPL_EXCHANGE: Record<number, Address> = {
   143: "0x34B6552d57a35a1D042CcAe1951BD1C370112a6F",
 };
 
-export function clientFor(chainId: number, rpc: string): PublicClient {
+/** RPCs in order of preference: Alchemy first when its secret is set, then the public RPC. */
+export function clientFor(chainId: number, rpcs: string[]): PublicClient {
+  const rpc = rpcs[0];
   const chain = defineChain({
     id: chainId,
     name: chainId === 143 ? "Monad" : "Monad testnet",
@@ -78,8 +81,10 @@ export function clientFor(chainId: number, rpc: string): PublicClient {
     rpcUrls: { default: { http: [rpc] } },
     contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
   });
-  // Public RPCs rate-limit, so reads fold into Multicall3 and retry.
-  return createPublicClient({ chain, transport: http(rpc, { retryCount: 3, retryDelay: 400 }), batch: { multicall: true } }) as PublicClient;
+  // Public RPCs rate-limit, so reads fold into Multicall3 and retry; a failing RPC falls through to the next.
+  const each = rpcs.map((url) => http(url, { retryCount: 2, retryDelay: 400 }));
+  const transport = each.length > 1 ? fallback(each) : each[0];
+  return createPublicClient({ chain, transport, batch: { multicall: true } }) as PublicClient;
 }
 
 export type Observation = Awaited<ReturnType<typeof observe>>;

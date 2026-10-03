@@ -158,6 +158,10 @@ Agent #1976 is a CLI test agent, not a house agent; its vault is frozen with NAV
 
 **`--signer mm` on testnet does not work with mm 7.0.0.** MetaMask's hosted RPC answers `Invalid chainId` for 10143: first in gas-fee estimation, and when the CLI supplies the fees itself, in mm's block tracker, which then polls forever past `--wallet-timeout`. No request reaches the wallet (none pending, the wallet's testnet nonce is still 0). The CLI now stops mm as soon as it logs that error and says nothing was signed. Monad mainnet is supported by mm, so the mm path is for mainnet once the registry is deployed there.
 
+### Alchemy (secondary RPC)
+
+Server-side clients use Alchemy first and fall back to the public RPC when the optional `ALCHEMY_RPC_URL` Worker secret is set: the house agents' reads, simulations and broadcasts in `agents/`, and the test-funds wallet in `web/`. Without the secret they use the public RPC only. Use the testnet endpoint (`https://monad-testnet.g.alchemy.com/v2/<key>`) while `CHAIN_ID` is 10143. Browsers keep using the public RPC, so the Alchemy key never reaches a page.
+
 ### House agents (`agents/`)
 
 The house agents run in the Cloudflare Worker `proofbook-agents`, on a cron every 5 minutes, on testnet. Each one is labelled as a house agent and trades a small size with a fixed, public strategy. House agent #1 (#1951) is momentum on Perpl's MON mark at 1x: 25 AUSD positions, a 1% move over 30 minutes to open, and 0.5% against to close.

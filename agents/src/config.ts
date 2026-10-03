@@ -28,7 +28,8 @@ export type HouseAgent = {
 
 export type Config = {
   chainId: number;
-  rpc: string;
+  /** Alchemy (ALCHEMY_RPC_URL secret) first when set, then RPC_URL. */
+  rpcs: string[];
   explorer: string;
   mode: Mode;
   model: string;
@@ -49,7 +50,7 @@ export function loadConfig(env: Env): Config {
   const rawAgents = (typeof env.HOUSE_AGENTS === "string" ? JSON.parse(env.HOUSE_AGENTS) : env.HOUSE_AGENTS) as Raw[];
   return {
     chainId,
-    rpc: String(env.RPC_URL),
+    rpcs: [(env as unknown as { ALCHEMY_RPC_URL?: string }).ALCHEMY_RPC_URL, String(env.RPC_URL)].filter((u): u is string => !!u),
     explorer: String(env.EXPLORER),
     mode,
     model: String(env.MODEL),
