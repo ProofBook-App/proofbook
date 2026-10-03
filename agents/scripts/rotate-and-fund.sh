@@ -65,7 +65,7 @@ if python3 -c "import sys; sys.exit(0 if $after >= $RESERVE_WEI else 1)"; then :
 fi
 read -r -p "Send $AMOUNT MON to $PRIVY_WALLET (gas limit 21000)? [y/N] " ok
 [ "$ok" = "y" ] || exit 1
-cast send "$PRIVY_WALLET" --value "$AMOUNT" --gas-limit 21000 --private-key "$FUNDER_PK" --rpc-url "$RPC"
+cast send "$PRIVY_WALLET" --value "${AMOUNT%ether}ether" --gas-limit 21000 --private-key "$FUNDER_PK" --rpc-url "$RPC"
 echo "privy wallet    $(cast balance "$PRIVY_WALLET" --rpc-url "$RPC" --ether) MON"
 echo
 echo "Next (agents/README.md, Going live): set MODE to \"live\" in wrangler.jsonc, apply the D1 migration remotely, wrangler deploy."
