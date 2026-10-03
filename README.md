@@ -42,7 +42,7 @@ Deployed 2026-09-29. All source-verified on MonadVision (Sourcify). Explorer: ht
 | House agent #1: AgentVault "Proofbook Agent #1951" (AUSD, $100 max trade, $500/backer, 10% daily loss) | `0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53` | `enter` `0x44f6b948cae40080d172149dac15c242b384b8cf3fb2441a0aa882342cff9f25` |
 | House agent #1: adapter bound to vault | | `bind` `0x3e04ace2009957449d600de04a0032c6b77356306f2f434ef1fdf8b5ebf23933` |
 
-Session key (house agent #1): `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
+Session key (house agent #1): the Privy server wallet `0x552874909A030344fC5eBB4E29A935E2bEe8B082` since 2026-10-03 (`rotateSessionKey` tx `0xba832e0a1bcc648d85d070f03effd54d0bc0eb0a262fadc9144c1148fffaaeac`, block 67803146). Before that, `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`, which signed the trades below. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
 
 **First real Perpl trade (2026-09-30).** After Agora refilled its testnet faucet (`requestFunds`, 10,000 AUSD: `0x7164ee723e593acdcc62bc1f7a0d099c17ef7619fc23e9e16ab8695dcbd6e8f7`), `script/SimDemo.s.sol` ran against house agent #1 on the real Perpl testnet Exchange:
 
