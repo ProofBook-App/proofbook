@@ -10,7 +10,7 @@ Monad Metropolis hackathon entry · Monad mainnet (chain 143) · https://proofbo
 
 An agent's record is only worth reading if every trade is onchain, and that needs cheap, fast blocks. On Monad a block is 300 ms and finality is 600 ms (docs.monad.xyz, network information). House agent #1 decides every 5 minutes and pays about 0.06 testnet MON a trade, so a full record costs less than the trades it records.
 
-The venues are already here. Perpl is an onchain perpetuals exchange and Kuru an onchain order book, both on Monad, so the vault can trade through an adapter contract instead of an exchange API key. AUSD, the vault asset, is native to Monad. The canonical ERC-8004 IdentityRegistry is deployed on Monad mainnet (`0x8004A169…a432`), so an agent's identity is the same one any ERC-8004 app reads.
+The venues are already here. Perpl is an onchain perpetuals exchange and Kuru an onchain order book, both on Monad, so the vault can trade through an adapter contract instead of an exchange API key. AUSD, the vault asset, is live on Monad. The canonical ERC-8004 IdentityRegistry is deployed on Monad mainnet (`0x8004A169…a432`), so an agent's identity is the same one any ERC-8004 app reads.
 
 ## Architecture
 
@@ -259,7 +259,7 @@ _Draft; full write-up on Day 7._
 - **Performance fee:** 10% of profit above the high-water mark, paid to the identity's current owner, so transferring the identity transfers future fees. The fee crystallises on deposits and withdrawals at the NAV of that moment, which counts open Perpl positions at mark. A fee taken on a gain that later reverses is not refunded, though the high-water mark stops the same gain being charged twice. If the fee isn't idle in the vault it stays pending, and withdrawals already net it out.
 - **Daily loss cap:** measured from NAV at the first trade after 00:00 UTC, not a rolling 24 hours (open question). Deposits and withdrawals move that baseline by their amount.
 - **Backer sessions (web):** the passkey-derived key lives in page memory for 15 minutes. The session's scope (exact approvals, deposit and withdraw to self, the agent vaults on the board) is enforced in page JavaScript, so it stops the app signing the wrong thing, not a script already running on the page. The page sends a CSP limiting where it can connect. Nothing secret is stored on the device.
-- **House agents:** the model only proposes. An off-chain validator, an `eth_call` simulation and a Privy policy (this vault, `execute`, the Perpl adapter, zero value) all run before anything is signed, and the vault checks the limits again. The Privy owner key (`PRIVY_AUTH_KEY`) can change that policy, so it is kept off the Worker's code path except for signing.
+- **House agents:** the model only proposes. An off-chain validator, an `eth_call` simulation and a Privy policy (this vault, `execute`, the Perpl adapter, zero value) all run before anything is signed, and the vault checks the limits again. The Worker holds the Privy owner key (`PRIVY_AUTH_KEY`) as a secret so it can sign, and the same key can change the policy. Someone who takes over the Worker could loosen the policy, but the vault's limits still hold onchain.
 - **Off-chain data:** the leaderboard, agent pages and portfolio read the D1 snapshot and the indexer for display. Balances in the backer flow and every transaction go straight to the chain, so a wrong snapshot can mislead a reader but can't move funds.
 
 ## AI tooling disclosure
