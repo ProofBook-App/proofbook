@@ -250,6 +250,22 @@ SIM=true forge script script/HouseAgent.s.sol --rpc-url monad_testnet --broadcas
 forge script script/SimDemo.s.sol --rpc-url monad_testnet --broadcast --slow
 ```
 
+## Bounties
+
+What each bounty asks for, and where Proofbook shows it. Everything below is on Monad testnet today; mainnet comes after the human approves the deploy.
+
+| Bounty | What we built | Where to see it | Still open |
+|---|---|---|---|
+| Agora, best mobile trading app | An installable app (PWA). The backer's account is a Mera passkey, the portfolio shows AUSD, and backers' AUSD is traded on Perpl by the agent | https://proofbook.app/portfolio, `/agent/1951` (open Perpl positions, live trades) | Whether "trades through Perpl" needs the backer to place the order (`docs/open-questions.md`); a real-phone test |
+| Perpl, best use of API | House agent #1 trades the MON perpetual through PerplAdapter on its own, inside onchain limits, and logs a reason for every decision | `/agent/1951` ("Why it trades"), the testnet trades in [House agents](#house-agents-agents) | Mainnet; house agents #2 and #3 |
+| Kuru, consumer trading app | KuruAdapter (MON-USDC market orders, oracle-clamped valuation, 3% fill band), fork-tested on mainnet | `contracts/test/fork/` | A Kuru path in the app, evidence of demand, first users, a retention plan |
+| MetaMask, Agent Wallet plugin | `mm-plugin-proofbook`: `mm proofbook agent status|create|fund|run|freeze`, every tx through the Agent Wallet, plus `skills/proofbook/SKILL.md` | [MetaMask Agent Wallet plugin](#metamask-agent-wallet-plugin-plugin), `plugin/README.md` | mm 7.0.0 can't sign on Monad testnet, so the mm path needs mainnet; `create` needs an adapter factory to run fully through mm |
+| Mera, best Mera-powered UX | Mera is the whole backer account layer: one passkey prompt creates the account and starts a 15-minute signing session that covers every page. Three taps to a first deposit. The stateless test passed in production | [Backing an agent](#backing-an-agent-deposit-and-withdraw), `docs/reference/mera.md` | A true second-device login |
+| Privy | House-agent session keys are Privy server wallets. A Privy policy allows only `execute` on the agent's own vault, through the Perpl adapter, at zero value. The Worker signs through Privy and never holds a private key | `docs/reference/privy.md` (policy, wallet, the denied test), the Privy-signed trades | A mainnet policy |
+| Envio | HyperIndex over the registry, vaults, adapters and Perpl fills, deployed on Envio Cloud. The leaderboard, agent pages and portfolio history are built from it | [Indexer (testnet)](#indexer-testnet), `indexer/` | A short demo; the free plan's event limit |
+| Kimi | Kimi K2.6 on Workers AI makes every house-agent decision with a public reason. In the first 101 runs its choice matched the published rule in code every time | `/agent/1951`, `docs/blog/kimi-house-agents.md` (draft) | Publish the article |
+| Alchemy | Alchemy is the first RPC for the house agents and the test-funds wallet, with the public RPC as fallback | [Alchemy (secondary RPC)](#alchemy-secondary-rpc) | Set the `ALCHEMY_RPC_URL` secret on both Workers |
+
 ## Threat model
 
 _Draft; full write-up on Day 7._
