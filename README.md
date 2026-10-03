@@ -8,11 +8,37 @@ Monad Metropolis hackathon entry · Monad mainnet (chain 143) · https://proofbo
 
 ## Why Monad
 
-_TODO_
+An agent's record is only worth reading if every trade is onchain, and that needs cheap, fast blocks. On Monad a block is 300 ms and finality is 600 ms (docs.monad.xyz, network information). House agent #1 decides every 5 minutes and pays about 0.06 testnet MON a trade, so a full record costs less than the trades it records.
+
+The venues are already here. Perpl is an onchain perpetuals exchange and Kuru an onchain order book, both on Monad, so the vault can trade through an adapter contract instead of an exchange API key. AUSD, the vault asset, is native to Monad. The canonical ERC-8004 IdentityRegistry is deployed on Monad mainnet (`0x8004A169…a432`), so an agent's identity is the same one any ERC-8004 app reads.
 
 ## Architecture
 
-See [spec.md §4](spec.md). Packages: `contracts/` (Foundry), `agents/`, `indexer/` (Envio HyperIndex), `web/` (React Router v7 on Cloudflare Workers), `cli/`, `plugin/`.
+```
+ builder: proofbook CLI / mm plugin          backer: Mera passkey in the browser (web/)
+            |  enter, fund, freeze                     |  approve, deposit, withdraw (signing session)
+            v                                          v
+ ERC-8004 IdentityRegistry <-- AgentRegistry --> AgentVault (one per agent, ERC-4626, AUSD)
+                                                       |  execute(adapter, data): limits checked onchain
+ house agents: proofbook-agents Worker                 v
+   Kimi K2.6 decides -> validator -> Privy signs  PerplAdapter / KuruAdapter --> Perpl / Kuru
+            |                                          |
+            v                                          v  events
+       D1 decision log                        Envio HyperIndex -> GraphQL -> web Worker cron -> D1 snapshot
+            \______________________________________________________________/
+                                     web/ pages and /api/* read D1
+```
+
+| Package | What it is |
+|---|---|
+| `contracts/` | Foundry. AgentRegistry, AgentVault, PerplAdapter, KuruAdapter; invariant suite for spec §6 |
+| `indexer/` | Envio HyperIndex over the registry, vaults, adapters and Perpl fills; deployed to Envio Cloud |
+| `web/` | React Router v7 on Cloudflare Workers with D1. Server-rendered public pages, a client-only backer flow (Mera), `/api/*`, OG images |
+| `agents/` | The `proofbook-agents` Worker: house agents on a 5-minute cron, Kimi K2.6 via Workers AI, an off-chain validator, Privy server-wallet signing |
+| `cli/` | The `proofbook` CLI: `agent create|fund|run|freeze|status` |
+| `plugin/` | `mm-plugin-proofbook`, the MetaMask Agent Wallet plugin, and `skills/proofbook/SKILL.md` |
+
+The spec ([spec.md §4](spec.md)) has the original design.
 
 ## Setup
 
@@ -228,11 +254,19 @@ _Draft; full write-up on Day 7._
 - **Session-key compromise:** the key can only call allowlisted adapters, each call is capped at `maxTradeNotional`, and a loss past the daily cap freezes the vault in the same tx. Within those limits it can still trade badly.
 - **Perpl (PerplAdapter):** Perpl's owner can upgrade the Exchange, freeze or block accounts, enable whitelisting and halt trading. Withdrawals are rate-limited exchange-wide. If the Exchange cannot be read, the vault counts the Perpl leg as 0 rather than reverting, so idle funds stay withdrawable. Positions are valued at Perpl's mark with no exit fee deducted. Order limits must be within 3% of Perpl's mark, which bounds the worst fill. The per-trade cap does not limit the sum of resting orders. When a vault is frozen, anyone can `recall` free margin to it, but open positions stay open until the agent owner unfreezes.
 - **Kuru (KuruAdapter):** Kuru's order book can be moved within one transaction, so held MON is valued at the best bid clamped to 97–100% of Perpl's MON oracle price (Chainlink Data Streams). A spoofed high bid cannot inflate NAV; a dumped book moves it by at most 3%. Every fill must be within 3% of the oracle, which limits what a compromised session key can lose to a counterparty's off-market order. If the oracle is stale, Kuru trades stop and held MON counts as 0. When a vault is frozen, anyone can `unwind` held MON back to the vault under the same 3% band.
-- _TODO: guardian powers, fee edge cases._
+- **Guardian:** one address, fixed at registry deploy and copied into every vault. It can freeze any vault and nothing else. It can't unfreeze, move funds or change limits.
+- **Agent owner (the ERC-8004 identity owner):** can freeze, unfreeze after a 24-hour cooldown, and rotate the session key. A stolen owner key can install a hostile session key, which is still bound by the vault's limits. Limits are fixed at entry and nobody can change them.
+- **Performance fee:** 10% of profit above the high-water mark, paid to the identity's current owner, so transferring the identity transfers future fees. The fee crystallises on deposits and withdrawals at the NAV of that moment, which counts open Perpl positions at mark. A fee taken on a gain that later reverses is not refunded, though the high-water mark stops the same gain being charged twice. If the fee isn't idle in the vault it stays pending, and withdrawals already net it out.
+- **Daily loss cap:** measured from NAV at the first trade after 00:00 UTC, not a rolling 24 hours (open question). Deposits and withdrawals move that baseline by their amount.
+- **Backer sessions (web):** the passkey-derived key lives in page memory for 15 minutes. The session's scope (exact approvals, deposit and withdraw to self, the agent vaults on the board) is enforced in page JavaScript, so it stops the app signing the wrong thing, not a script already running on the page. The page sends a CSP limiting where it can connect. Nothing secret is stored on the device.
+- **House agents:** the model only proposes. An off-chain validator, an `eth_call` simulation and a Privy policy (this vault, `execute`, the Perpl adapter, zero value) all run before anything is signed, and the vault checks the limits again. The Privy owner key (`PRIVY_AUTH_KEY`) can change that policy, so it is kept off the Worker's code path except for signing.
+- **Off-chain data:** the leaderboard, agent pages and portfolio read the D1 snapshot and the indexer for display. Balances in the backer flow and every transaction go straight to the chain, so a wrong snapshot can mislead a reader but can't move funds.
 
 ## AI tooling disclosure
 
 This project is built with Claude Code (Anthropic). The human writes the spec and the invariant tests; Claude generates implementation to make them pass. All AI-generated code is reviewed before merge.
+
+AI in the product itself: house agents ask Kimi K2.6 (`@cf/moonshotai/kimi-k2.6`, Cloudflare Workers AI) for each decision. Every prompt, response and decision is logged in D1, and the public reason is shown on the agent page.
 
 ## Pre-existing code
 
