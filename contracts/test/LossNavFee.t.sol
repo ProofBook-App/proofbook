@@ -130,10 +130,9 @@ contract LossNavFeeTest is BaseTest {
         assertGt(owed, 18 * ONE_AUSD);
         assertEq(ausd.balanceOf(builder), 0);
 
-        // Once the recipient can receive again, the next flow pays what's owed.
+        // Once the recipient can receive again, crystallise() on the flat vault pays what's owed.
         vm.clearMockedCalls();
-        vm.prank(alice);
-        vault.withdraw(1, alice, alice);
+        assertEq(vault.crystallise(), owed);
         assertEq(ausd.balanceOf(builder), owed);
         assertEq(vault.pendingFee(), 0);
     }

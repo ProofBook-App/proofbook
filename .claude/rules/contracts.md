@@ -23,5 +23,6 @@ paths:
 - **NAV** = vault balances + MarginAccount balances + funds locked in resting orders + positions at a *conservative* mark.
   - The Kuru mid can be manipulated. Test daily-loss freezing under a manipulated mid.
 - **Perpl:** model `PerplAdapter` on Perpl's `DelegatedAccount.sol`. See `docs/reference/perpl.md`.
+- **Fee (security review L3):** never crystallise at a mark. Exits pay their pro-rata part, deposits average the high-water mark, and the full fee goes only through `crystallise()` on a flat vault.
 - **Events:** every state change emits an event (invariant 7). When you add an event, update the indexer schema in the same PR.
 - **Addresses:** all canonical addresses live in `docs/reference/monad.md`. Never hard-code an address you haven't checked with `cast code`.

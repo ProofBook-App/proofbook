@@ -24,11 +24,12 @@ contract BaselineAndEntryTest is BaseTest {
         // The review's case. Subtracting would leave 1,000 - 100 (fee) - 999 = 0 and no floor at all.
         vm.prank(alice);
         vault.withdraw(999 * ONE_AUSD, alice, alice);
-        // The fee keeps 1,900/2,000 of the baseline (950), the withdrawal 901/1,900 of that.
-        assertEq(vault.nav(), 901 * ONE_AUSD);
-        assertEq(vault.dayStartNav(), 450_500_000, "still up 100% on the day, as before the withdrawal");
+        // Alice's shares pay their part of the fee (100 x 999/1,900 = 52.58, security review L3), and
+        // the baseline keeps the 948.42/2,000 of itself that stays.
+        assertEq(vault.nav(), 948_421_053);
+        assertEq(vault.dayStartNav(), 474_210_527, "still up 100% on the day, as before the withdrawal");
 
-        // So losing two thirds of what's left breaches the cap (floor 405.45) and freezes.
+        // So losing two thirds of what's left breaches the cap (floor 426.79) and freezes.
         _trade(vault, 0, -int256(600 * ONE_AUSD));
         assertTrue(vault.frozen());
     }

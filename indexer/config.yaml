@@ -31,6 +31,7 @@ contracts:
       - event: Frozen
       - event: Unfrozen
       - event: FeeTaken
+      - event: HighWaterMarkSet
       - event: SessionKeyRotated
       - event: DayRolled
   # PerplAdapter and KuruAdapter events, registered from AgentRegistered's envelope.venues.

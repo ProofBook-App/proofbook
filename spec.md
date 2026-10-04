@@ -78,7 +78,7 @@ State: `agentId`, `sessionKey`, `policy {maxTradeNotional, dailyLossCap, venueAl
 - `execute(venue, calldata)` — `onlySessionKey`, `notFrozen`; calls adapter; before/after NAV check. Venue and notional breaches revert. A daily-loss breach keeps the trade and freezes in the same tx (a revert would undo the freeze; invariant 3).
 - `rotateSessionKey`, `freeze` (owner or guardian), `unfreeze` (owner, after cooldown).
 - `performanceFee` — high-water-mark, taken on withdrawal, paid to agent owner. Keep simple: 10% of profit above HWM.
-- Events: `Executed(venue, notional, venueDelta, navBefore, navAfter)`, `PolicyBreach(reason, nav, dayStartNav)`, `Frozen(by)`, `Unfrozen(by)`, `FeeTaken(to, assets, highWaterMark)`, `SessionKeyRotated`, `DayRolled(dayStart, dayStartNav)`, plus ERC-4626 `Deposit`/`Withdraw`. Registry: `AssetAllowed`, `AgentRegistered`, `VaultLinked(agentId, vault, asset, sessionKey)`.
+- Events: `Executed(venue, notional, venueDelta, navBefore, navAfter)`, `PolicyBreach(reason, nav, dayStartNav)`, `Frozen(by)`, `Unfrozen(by)`, `FeeTaken(to, assets, highWaterMark)`, `HighWaterMarkSet(highWaterMark)`, `SessionKeyRotated`, `DayRolled(dayStart, dayStartNav)`, plus ERC-4626 `Deposit`/`Withdraw`. Registry: `AssetAllowed`, `AgentRegistered`, `VaultLinked(agentId, vault, asset, sessionKey)`.
 - Adapters are called with CALL (never DELEGATECALL). The vault approves exactly the quoted notional per execute and clears it after, so each venue is a per-vault adapter instance that holds the venue account.
 
 ### Adapters

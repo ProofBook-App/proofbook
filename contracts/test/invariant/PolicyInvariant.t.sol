@@ -343,9 +343,10 @@ contract PolicyInvariantTest is BaseTest {
         _trade(vault, MAX_TRADE, 1_000e6); // +1,000
 
         vm.prank(alice);
-        vault.withdraw(1_000e6, alice, alice); // crystallises the fee, HWM moves up
+        vault.withdraw(1_000e6, alice, alice); // pays the leaving shares' part of the fee (security review L3)
         uint256 feeAfterFirst = ausd.balanceOf(builder);
         assertGt(feeAfterFirst, 0);
+        assertLt(feeAfterFirst, 100e6);
 
         _trade(vault, MAX_TRADE, -300e6);
         _trade(vault, MAX_TRADE, 300e6); // dips and recovers, no new high
@@ -353,7 +354,8 @@ contract PolicyInvariantTest is BaseTest {
         uint256 shares = vault.balanceOf(alice);
         vm.prank(alice);
         vault.redeem(shares, alice, alice);
-        assertEq(ausd.balanceOf(builder), feeAfterFirst);
+        // The exits paid 10% of the 1,000 profit between them, once. The dip and recovery added nothing.
+        assertApproxEqAbs(ausd.balanceOf(builder), 100e6, 2);
     }
 
     function test_Inv6_feeFollowsIdentityTransfer() public {

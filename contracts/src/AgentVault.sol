@@ -21,12 +21,17 @@ import {IVenueAdapter} from "./interfaces/IVenueAdapter.sol";
 /// - Adapters are called with CALL, never DELEGATECALL. For each execute the vault approves the
 ///   adapter for exactly the quoted notional and clears the approval afterwards.
 /// - A daily-loss breach does not revert: the trade stands and the vault freezes in the same tx.
+/// - The fee is never crystallised at a mark (security review L3). An exit pays the leaving
+///   shares' part of it, a deposit averages the high-water mark so the fee owed doesn't change,
+///   and the whole fee is paid only by crystallise() on a flat vault, where profit is realised.
 contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
     uint256 public constant FEE_BPS = 1_000; // 10% of profit above the high-water mark
     uint256 public constant UNFREEZE_COOLDOWN = 1 days;
+    /// @dev crystallise() counts the vault as flat while venues hold at most 0.1% of NAV (Kuru dust).
+    uint256 public constant FLAT_BPS = 10;
     uint256 internal constant BPS = 10_000;
     uint256 internal constant PRICE_SCALE = 1e18; // high-water mark = assets * 1e18 / shares
     uint8 internal constant DECIMALS_OFFSET = 6;
@@ -249,21 +254,23 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
     function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256 shares) {
         if (frozen) revert VaultFrozen();
         if (!venuesReliable()) revert ExposureUnreliable();
-        _takeFee();
         _checkCap(receiver, assets);
+        (uint256 supply, bool owed) = (totalSupply(), pendingFee() > 0);
         shares = previewDeposit(assets);
         _deposit(_msgSender(), receiver, assets, shares);
         _onInflow(assets);
+        _averageHighWaterMark(supply, owed, assets);
     }
 
     function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256 assets) {
         if (frozen) revert VaultFrozen();
         if (!venuesReliable()) revert ExposureUnreliable();
-        _takeFee();
+        (uint256 supply, bool owed) = (totalSupply(), pendingFee() > 0);
         assets = previewMint(shares);
         _checkCap(receiver, assets);
         _deposit(_msgSender(), receiver, assets, shares);
         _onInflow(assets);
+        _averageHighWaterMark(supply, owed, assets);
     }
 
     function withdraw(uint256 assets, address receiver, address owner)
@@ -272,12 +279,10 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         nonReentrant
         returns (uint256 shares)
     {
-        _takeFee();
         uint256 maxAssets = maxWithdraw(owner);
         if (assets > maxAssets) revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         shares = previewWithdraw(assets);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
-        _onOutflow(assets);
+        _exit(receiver, owner, assets, shares);
     }
 
     function redeem(uint256 shares, address receiver, address owner)
@@ -286,12 +291,26 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         nonReentrant
         returns (uint256 assets)
     {
-        _takeFee();
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
         assets = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
-        _onOutflow(assets);
+        _exit(receiver, owner, assets, shares);
+    }
+
+    /// @inheritdoc IAgentVault
+    /// @dev A flat vault has no mark to pick a peak of: what's left is realised cash. The gross
+    /// share price after paying becomes the new high-water mark. Works while frozen.
+    function crystallise() external nonReentrant returns (uint256 fee) {
+        if (!venuesReliable()) revert ExposureUnreliable();
+        uint256 total = nav();
+        uint256 atVenues = total - IERC20(asset()).balanceOf(address(this));
+        if (atVenues * BPS > total * FLAT_BPS) revert NotFlat(atVenues, total);
+        fee = pendingFee();
+        address to = _payFee(fee);
+        if (to == address(0)) return 0;
+        _onOutflow(fee);
+        highWaterMark = nav().mulDiv(PRICE_SCALE, totalSupply());
+        emit FeeTaken(to, fee, highWaterMark);
     }
 
     // ------------------------------------------------------------------ internals
@@ -318,29 +337,43 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         }
     }
 
-    /// @dev Crystallise the fee on profit above the high-water mark, then raise the mark.
-    /// Runs before every deposit and withdrawal, so entrants never pay for profit made before
-    /// they joined and the same profit is never charged twice. If the fee is not idle in the
-    /// vault (it sits at a venue), it stays pending and totalAssets keeps it netted out.
-    function _takeFee() internal {
-        uint256 fee = pendingFee();
-        if (fee == 0) return;
-        IERC20 token = IERC20(asset());
-        if (token.balanceOf(address(this)) < fee) return;
+    /// @dev Burns `shares` and pays the leaving shares' part of the pending fee. The gross share
+    /// price, and so the high-water mark, is unchanged: the backers who stay keep owing their part.
+    /// `assets` is already net of that part (totalAssets nets the whole fee).
+    function _exit(address receiver, address owner, uint256 assets, uint256 shares) internal {
+        uint256 fee = shares == 0 ? 0 : pendingFee().mulDiv(shares, totalSupply()); // no shares, no supply to divide by
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        address to = _payFee(fee);
+        if (to != address(0)) emit FeeTaken(to, fee, highWaterMark);
+        _onOutflow(to == address(0) ? assets : assets + fee);
+    }
 
-        // A recipient that can't be found (burned identity) or can't receive (a blocklisted
-        // address) leaves the fee pending instead of reverting every withdrawal (security review
-        // M3). totalAssets() and maxWithdraw() already keep a pending fee out of what backers own.
-        address to;
+    /// @dev Sends `fee` to the agent owner; returns the owner, or 0 when nothing was paid. A
+    /// recipient that can't be found (burned identity) or can't receive (a blocklisted address)
+    /// leaves the fee pending instead of reverting every withdrawal (security review M3).
+    /// totalAssets() and maxWithdraw() already keep a pending fee out of what backers own.
+    function _payFee(uint256 fee) internal returns (address to) {
+        if (fee == 0) return address(0);
+        IERC20 token = IERC20(asset());
+        if (token.balanceOf(address(this)) < fee) return address(0);
         try registry.ownerOf(agentId) returns (address owner_) {
             to = owner_;
         } catch {
-            return;
+            return address(0);
         }
-        if (to == address(0) || !token.trySafeTransfer(to, fee)) return;
-        _onOutflow(fee);
-        highWaterMark = nav().mulDiv(PRICE_SCALE, totalSupply()); // gross price after paying the fee
-        emit FeeTaken(to, fee, highWaterMark);
+        if (to == address(0) || !token.trySafeTransfer(to, fee)) return address(0);
+    }
+
+    /// @dev After a deposit of `assets` into a vault of `supply` shares. Above the mark (`owed`),
+    /// the new shares join at their entry price: h' = (supply * h + assets * 1e18) / supply',
+    /// which leaves the fee owed unchanged, so the entrant pays only on gains after joining and
+    /// a deposit of any size can't crystallise or reprice the fee. Below the mark it stays put:
+    /// the owner, not existing backers, forgoes the fee on an entrant's recovery to it. An empty
+    /// vault starts from the entrant's price.
+    function _averageHighWaterMark(uint256 supply, bool owed, uint256 assets) internal {
+        if (supply != 0 && !owed) return;
+        highWaterMark = Math.ceilDiv(supply * highWaterMark + assets * PRICE_SCALE, totalSupply());
+        emit HighWaterMarkSet(highWaterMark);
     }
 
     /// @dev Fee that is owed but could not be paid yet; kept out of what backers can withdraw.

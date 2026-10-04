@@ -16,6 +16,8 @@ interface IAgentVault {
     event Frozen(address indexed by);
     event Unfrozen(address indexed by);
     event FeeTaken(address indexed to, uint256 assets, uint256 highWaterMark);
+    /// @notice A deposit moved the high-water mark (averaged in above it, or reset on an empty vault).
+    event HighWaterMarkSet(uint256 highWaterMark);
     event SessionKeyRotated(address indexed previous, address indexed next);
     event DayRolled(uint256 dayStart, uint256 dayStartNav);
 
@@ -31,6 +33,8 @@ interface IAgentVault {
     error ExposureUnreliable();
     error DepositCapExceeded(address backer, uint256 attempted, uint256 cap);
     error UnfreezeCooldown(uint256 readyAt);
+    /// @notice crystallise() needs the vault flat: venues hold at most FLAT_BPS of NAV.
+    error NotFlat(uint256 atVenues, uint256 nav);
 
     /// @notice Session-key-only. Routes one action through an allowlisted adapter.
     /// Venue and notional breaches revert. A daily-loss breach does NOT revert: the trade
@@ -40,6 +44,8 @@ interface IAgentVault {
     function rotateSessionKey(address next) external;
     function freeze() external;
     function unfreeze() external;
+    /// @notice Anyone. Pays the whole pending fee, only while the vault is flat (security review L3).
+    function crystallise() external returns (uint256 fee);
 
     function agentId() external view returns (uint256);
     function sessionKey() external view returns (address);

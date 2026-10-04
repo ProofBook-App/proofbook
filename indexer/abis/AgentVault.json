@@ -151,6 +151,19 @@
   },
   {
     "type": "event",
+    "name": "HighWaterMarkSet",
+    "inputs": [
+      {
+        "name": "highWaterMark",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "PolicyBreach",
     "inputs": [
       {

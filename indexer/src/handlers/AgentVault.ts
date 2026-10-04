@@ -182,6 +182,12 @@ indexer.onEvent({ contract: "AgentVault", event: "DayRolled" }, async ({ event, 
   });
 });
 
+// A deposit averaged the high-water mark in, or reset it on an empty vault (security review L3).
+indexer.onEvent({ contract: "AgentVault", event: "HighWaterMarkSet" }, async ({ event, context }) => {
+  const v = await context.Vault.getOrThrow(event.srcAddress);
+  context.Vault.set({ ...v, highWaterMark: event.params.highWaterMark, updatedAt: event.block.timestamp });
+});
+
 indexer.onEvent({ contract: "AgentVault", event: "PolicyBreach" }, async ({ event, context }) => {
   const v = await context.Vault.getOrThrow(event.srcAddress);
   context.PolicyEvent.set({
