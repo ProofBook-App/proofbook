@@ -1,5 +1,5 @@
 import { indexer, type Adapter, type EvmOnEventContext as Ctx } from "envio";
-import { eventId } from "../lib.js";
+import { blankAdapter, eventId } from "../lib.js";
 import { mark, perp, scaleExpOf, toCNS } from "../perpl.js";
 
 // PerplAdapter and KuruAdapter events. The kind is learned from the first kind-specific event.
@@ -25,20 +25,7 @@ type Action = {
 };
 
 async function adapter(context: Ctx, address: string): Promise<Adapter> {
-  return (
-    (await context.Adapter.get(address)) ?? {
-      id: address,
-      kind: "Unknown",
-      vault_id: undefined,
-      perplAccountId: undefined,
-      perplMarginIn: 0n,
-      perplMarginOut: 0n,
-      perplOrderCount: 0,
-      kuruBaseHeld: 0n,
-      kuruQuoteIn: 0n,
-      kuruQuoteOut: 0n,
-    }
-  );
+  return (await context.Adapter.get(address)) ?? blankAdapter(address);
 }
 
 function record(context: Ctx, e: E, a: Action) {

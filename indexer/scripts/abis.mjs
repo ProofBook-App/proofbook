@@ -11,6 +11,7 @@ const write = (name, abi) =>
 
 write("AgentRegistry", events("AgentRegistry.sol", "AgentRegistry"));
 write("AgentVault", events("AgentVault.sol", "AgentVault"));
+write("AdapterFactory", events("AdapterFactory.sol", "AdapterFactory"));
 const seen = new Set();
 write(
   "VenueAdapter",

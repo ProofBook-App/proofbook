@@ -143,6 +143,10 @@ type Adapter {
   id: ID! # adapter address
   kind: AdapterKind!
   vault: Vault
+  # From AdapterFactory.AdapterDeployed. Adapters of registries without a factory have none.
+  factory: Factory
+  deployedBy: String
+  deployedAt: Int
   perplAccountId: BigInt
   perplMarginIn: BigInt!
   perplMarginOut: BigInt!
@@ -168,6 +172,15 @@ type VenueAction {
   leverageHdths: BigInt
   timestamp: Int!
   txHash: String! @index
+}
+
+# An AdapterFactory and the registry it serves. A registry only accepts its own factory's adapters.
+type Factory {
+  id: ID! # factory address
+  registry: String # set once, by RegistrySet
+  adapterCount: Int!
+  createdAt: Int!
+  adapters: [Adapter!]! @derivedFrom(field: "factory")
 }
 
 type Asset {

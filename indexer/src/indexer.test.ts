@@ -22,7 +22,7 @@ describe("house agent #1 on Monad testnet", () => {
     t.expect(await indexer.Asset.get(AUSD)).toBeDefined();
     t.expect((await indexer.Adapter.getOrThrow(ADAPTER)).vault_id).toBe(VAULT);
 
-    // One range through the first MON mark: the test indexer rejects a range starting past PerplExchange's start_block.
+    // One range through the first MON mark.
     await indexer.process({ chains: { 10143: { startBlock: FIRST_TRADE[0], endBlock: FIRST_MON_MARK } } });
 
     const vault = await indexer.Vault.getOrThrow(VAULT);
@@ -66,5 +66,16 @@ describe("house agent #1 on Monad testnet", () => {
     t.expect(pos).toMatchObject({ side: "Long", lot: 1_828n, entryPrice: 2_736n, deposit: 50_087_200n, leverageHdths: 100n });
     t.expect(pos.notional).toBe(49_904_400n); // at the next MON mark, 2730: 2730 x 1828 x 10
     t.expect(pos.unrealisedPnl).toBe(-109_680n);
+  });
+
+  it("indexes the factory that serves the security-fix registry", async (t) => {
+    // Deploy.s.sol on 2026-10-04: factory (68_020_887), registry (68_020_890), factory.setRegistry (68_020_892).
+    const indexer = createTestIndexer();
+    await indexer.process({ chains: { 10143: { startBlock: 68_020_887, endBlock: 68_020_892 } } });
+
+    const factory = await indexer.Factory.getOrThrow("0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f");
+    t.expect(factory.registry).toBe("0x551fAE9567d5b66Bca89222732B9086eDB95DA4d");
+    t.expect(factory.adapterCount).toBe(0);
+    t.expect(await indexer.Asset.get(AUSD)).toBeDefined(); // allowlisted by the new registry's constructor
   });
 });

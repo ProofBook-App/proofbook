@@ -1,0 +1,40 @@
+[
+  {
+    "type": "event",
+    "name": "AdapterDeployed",
+    "inputs": [
+      {
+        "name": "adapter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum AdapterFactory.Kind"
+      },
+      {
+        "name": "by",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RegistrySet",
+    "inputs": [
+      {
+        "name": "registry",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  }
+]

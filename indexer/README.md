@@ -4,20 +4,21 @@ Envio HyperIndex v3 over the AgentRegistry, every AgentVault it deploys and ever
 
 ## What it indexes
 
-The registry is the only hard-coded address. Every other contract is registered from its events:
+The registries, the factory and the Perpl Exchange are the only hard-coded addresses. Every other contract is registered from its events:
 
 | Contract | Registered from | Events |
 |---|---|---|
-| AgentRegistry `0x25D4…8ABC` (testnet) | config | `AssetAllowed`, `AgentRegistered`, `VaultLinked` |
+| AdapterFactory `0xbe37…359f` (testnet) | config | `RegistrySet`, `AdapterDeployed` |
+| AgentRegistry `0x25D4…8ABC` and `0x551f…DA4d` (testnet) | config | `AssetAllowed`, `AgentRegistered`, `VaultLinked` |
 | AgentVault | `VaultLinked` | ERC-4626 `Deposit`/`Withdraw`, share `Transfer`, `Executed`, `PolicyBreach`, `Frozen`, `Unfrozen`, `FeeTaken`, `SessionKeyRotated`, `DayRolled` |
 | PerplExchange `0x1964…80cc` (testnet) | config | position, fill and mark events (below) |
 | VenueAdapter (Perpl and Kuru) | `AgentRegistered` `envelope.venues` | `Bound`, Perpl `MarginDeposited`/`MarginWithdrawn`/`Recalled`/`PerpTracked`/`OrderSent`, Kuru `Bought`/`Sold`/`Unwound` |
 
-The `AgentRegistered` event doesn't say which kind of adapter a venue is. So `VenueAdapter` merges the events of both kinds, and `Adapter.kind` is set by the first event that only one kind emits.
+The `AgentRegistered` event doesn't say which kind of adapter a venue is. So `VenueAdapter` merges the events of both kinds, and `Adapter.kind` is set by the first event that only one kind emits. A factory adapter gets its kind from `AdapterDeployed` instead, and is tracked from that event, along with `Adapter.factory`, `deployedBy` and `deployedAt`. Adapters of the old registry have no factory.
 
 ## Entities
 
-`Agent`, `Vault`, `Backer`, `Trade`, `Flow`, `PolicyEvent`, `NavPoint`, `Adapter`, `VenueAction`, `Asset`, and for Perpl `Perp`, `PerplAccount`, `PerplPosition`, `PerplFill`, `PerplPositionChange`. See `schema.graphql`.
+`Agent`, `Vault`, `Backer`, `Factory`, `Trade`, `Flow`, `PolicyEvent`, `NavPoint`, `Adapter`, `VenueAction`, `Asset`, and for Perpl `Perp`, `PerplAccount`, `PerplPosition`, `PerplFill`, `PerplPositionChange`. See `schema.graphql`.
 
 ### Per-vault leaderboard fields
 

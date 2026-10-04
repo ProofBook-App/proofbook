@@ -1,4 +1,4 @@
-import type { Vault } from "envio";
+import type { Adapter, Vault } from "envio";
 
 // Vault shares carry 6 more decimals than the asset (AgentVault DECIMALS_OFFSET = 6).
 const SHARE_PRICE_SCALE = 10n ** 24n;
@@ -24,3 +24,19 @@ export function reprice(v: Vault, timestamp: number): Vault {
     updatedAt: timestamp,
   };
 }
+
+export const blankAdapter = (id: string): Adapter => ({
+  id,
+  kind: "Unknown",
+  vault_id: undefined,
+  factory_id: undefined,
+  deployedBy: undefined,
+  deployedAt: undefined,
+  perplAccountId: undefined,
+  perplMarginIn: 0n,
+  perplMarginOut: 0n,
+  perplOrderCount: 0,
+  kuruBaseHeld: 0n,
+  kuruQuoteIn: 0n,
+  kuruQuoteOut: 0n,
+});

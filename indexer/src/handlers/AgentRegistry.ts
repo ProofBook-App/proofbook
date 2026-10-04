@@ -1,5 +1,5 @@
 import { indexer } from "envio";
-import { WAD } from "../lib.js";
+import { WAD, blankAdapter } from "../lib.js";
 
 indexer.contractRegister({ contract: "AgentRegistry", event: "AgentRegistered" }, async ({ event, context }) => {
   for (const venue of event.params.envelope.venues) context.chain.VenueAdapter.add(venue);
@@ -29,18 +29,7 @@ indexer.onEvent({ contract: "AgentRegistry", event: "AgentRegistered" }, async (
   for (const venue of envelope.venues) {
     const existing = await context.Adapter.get(venue);
     if (existing) continue;
-    context.Adapter.set({
-      id: venue,
-      kind: "Unknown",
-      vault_id: undefined,
-      perplAccountId: undefined,
-      perplMarginIn: 0n,
-      perplMarginOut: 0n,
-      perplOrderCount: 0,
-      kuruBaseHeld: 0n,
-      kuruQuoteIn: 0n,
-      kuruQuoteOut: 0n,
-    });
+    context.Adapter.set(blankAdapter(venue));
   }
 });
 

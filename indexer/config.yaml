@@ -6,6 +6,13 @@ field_selection:
   transaction_fields:
     - hash
 contracts:
+  # Mints the canonical adapters a registry accepts (security review C1). Registries deployed before
+  # 2026-10-03 have none.
+  - name: AdapterFactory
+    abi_file_path: abis/AdapterFactory.json
+    events:
+      - event: RegistrySet
+      - event: AdapterDeployed
   - name: AgentRegistry
     abi_file_path: abis/AgentRegistry.json
     events:
@@ -59,19 +66,23 @@ contracts:
       - event: PositionUnwoundV2
       - event: PositionUnwoundWithoutPaymentV2
 chains:
-  # Monad testnet: registry 0x25D4…8ABC (deploy block 66759038), real Perpl testnet.
+  # Monad testnet, real Perpl testnet. Registry 0x25D4…8ABC (block 66759038, no factory, house agent #1951),
+  # then factory 0xbe37…359f and registry 0x551f…DA4d with the security fixes (block 68020887, 2026-10-04).
   - id: 10143
     start_block: 66759038
     # Data source: HyperSync (https://10143.hypersync.xyz), needs ENVIO_API_TOKEN in indexer/.env.
     contracts:
+      - name: AdapterFactory
+        address:
+          - 0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f
       - name: AgentRegistry
         address:
           - 0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC
+          - 0x551fAE9567d5b66Bca89222732B9086eDB95DA4d
       - name: AgentVault
       - name: VenueAdapter
       - name: PerplExchange
         address:
           - 0x1964C32f0bE608E7D29302AFF5E61268E72080cc
-        # First MarginDeposited by one of our adapters (house agent #1's createAccount, tx 0x59c5…ea92).
-        # Nothing earlier can belong to our accounts. A later adapter's account opens after this anyway.
-        start_block: 66916943
+        # No contract start_block: Envio's test indexer refuses any range starting past one, and the handlers
+        # already drop accounts that aren't ours. The first of ours opened at 66916943 (tx 0x59c5…ea92).
