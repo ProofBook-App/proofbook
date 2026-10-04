@@ -76,6 +76,10 @@ C1 was confirmed by hand afterwards (`AgentRegistry._validate` and `AgentVault.e
 
 Honest adapters have no recipient parameters (Perpl `amountCNS` forced to 0, order types 5 and 6 rejected, withdrawals only to the vault). Approvals are exact and cleared after each execute. Calls are CALL only. Execute, deposit and withdraw share one `nonReentrant` guard. A decimals offset of 6 handles first-depositor inflation. The high-water mark update after a fee is correct. The guardian can only freeze.
 
+## Deployment
+
+All drafted fixes except L3 went to testnet on 2026-10-04: AdapterFactory `0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f` and AgentRegistry `0x551fAE9567d5b66Bca89222732B9086eDB95DA4d` (README "Testnet deployments"). House agent #1 is still on the old registry. Nothing is on mainnet.
+
 ## Before mainnet
 
 C1 must be fixed for any agent Proofbook doesn't run. H1, H2 and M1 to M4 should be fixed, or stated plainly in the README, before backers' real money goes in.

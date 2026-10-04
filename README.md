@@ -58,7 +58,7 @@ cd contracts && forge build && forge test -vvv
 
 ## Testnet deployments (10143)
 
-Deployed 2026-09-29. All source-verified on MonadVision (Sourcify). Explorer: https://testnet.monadvision.com
+Deployed 2026-09-29, and the fixed factory and registry on 2026-10-04 (block 68020887). All source-verified on MonadVision (Sourcify). House agent #1 stays on the 2026-09-29 registry; the CLI, web and agents still point there. Explorer: https://testnet.monadvision.com
 
 | Contract | Address | Deploy tx |
 |---|---|---|
@@ -67,6 +67,8 @@ Deployed 2026-09-29. All source-verified on MonadVision (Sourcify). Explorer: ht
 | House agent #1: PerplAdapter | `0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09` | `0x831795948fd67f31baa2eb8c990822b5215c17671a1840d859cf1f2364a5b722` |
 | House agent #1: AgentVault "Proofbook Agent #1951" (AUSD, $100 max trade, $500/backer, 10% daily loss) | `0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53` | `enter` `0x44f6b948cae40080d172149dac15c242b384b8cf3fb2441a0aa882342cff9f25` |
 | House agent #1: adapter bound to vault | | `bind` `0x3e04ace2009957449d600de04a0032c6b77356306f2f434ef1fdf8b5ebf23933` |
+| AdapterFactory (security fixes, 2026-10-04; Perpl only, no Kuru on testnet) | `0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f` | `0xfc62aaa2a0b02d7f055fd3e17bdc4d97cebbad528f698c25b31b4a5fe901e6e4` |
+| AgentRegistry (security fixes, 2026-10-04; accepts only the factory's adapters; guardian `0x3faE…9F51`, assets: testnet AUSD) | `0x551fAE9567d5b66Bca89222732B9086eDB95DA4d` | `0x9fcf3dabfacc273413f105cf8edb474bf7e4e00e2362ccabded5cbbe9ec0142a`, `setRegistry` `0xfb37059389154e4f989212ce83ad298754f3c90e1678d87f97a4f458d905b481` |
 
 Session key (house agent #1): the Privy server wallet `0x552874909A030344fC5eBB4E29A935E2bEe8B082` since 2026-10-03 (`rotateSessionKey` tx `0xba832e0a1bcc648d85d070f03effd54d0bc0eb0a262fadc9144c1148fffaaeac`, block 67803146), funded with 0.3 test MON for gas (tx `0xe7c8c6471808de06356e1fa62a3bb39672d49995660e907f8cd96fe9ef96eea1`). Before that, `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`, which signed the trades below. First autonomous trade, decided by Kimi K2.6 and signed through Privy: close of the 1,828-lot MON long ("30-minute change is -73 bps, below the -50 bps threshold"), tx `0x0afe114db82e1bacc671ebd1f1d609fcbc8d947abec855ab9066a1fadbdb2749`, block 67830730, 590,385 gas. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
 
@@ -237,7 +239,7 @@ forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --private-k
 forge script script/HouseAgent.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow
 ```
 
-`Deploy.s.sol` deploys the `AdapterFactory` (the chain's canonical Perpl and Kuru addresses), then the registry, which accepts only the factory's adapters, then links the two. `HouseAgent.s.sol` gets its adapter from `factory.deployPerpl()`/`deployKuru()`, and `enter` binds it. Registries deployed before 2026-10-03, including the current testnet one, have no factory (security review C1); the fix isn't deployed yet. `script/Chains.sol` holds the per-chain addresses. Kuru v1 is mainnet-only, so `VENUE=kuru` works on 143 only, or on testnet with `SIM=true`. `test/fork/Deploy.fork.t.sol` runs every script on testnet and mainnet forks.
+`Deploy.s.sol` deploys the `AdapterFactory` (the chain's canonical Perpl and Kuru addresses), then the registry, which accepts only the factory's adapters, then links the two. `HouseAgent.s.sol` gets its adapter from `factory.deployPerpl()`/`deployKuru()`, and `enter` binds it. Registries deployed before 2026-10-03, including house agent #1's testnet registry, have no factory (security review C1). The fixed testnet registry is `0x551f…DA4d` (2026-10-04). `script/Chains.sol` holds the per-chain addresses. Kuru v1 is mainnet-only, so `VENUE=kuru` works on 143 only, or on testnet with `SIM=true`. `test/fork/Deploy.fork.t.sol` runs every script on testnet and mainnet forks.
 
 Testnet sim stack (testnet only):
 
