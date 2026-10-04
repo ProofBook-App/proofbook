@@ -31,17 +31,17 @@
 		// unless privyWalletAddress is the vault's current session key.
 		"HOUSE_AGENTS": [
 			{
-				"agentId": "1951",
+				"agentId": "2000",
 				"label": "House agent #1 (momentum)",
-				"vault": "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53",
-				"adapter": "0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09",
+				"vault": "0x6b2a2F80172C5cB83702A155F1cBFBA9845276Df",
+				"adapter": "0x4D91674bA9263e10fBEB9c610606fF6EF82B39cD",
 				"perpId": "64",
 				"sizeAusd": "25",
 				"maxSizeAusd": "50",
 				"thresholdBps": 100,
 				"lookbackMinutes": 30,
-				"privyWalletId": "wnv9gal23ndaqtce5l0kgz2i",
-				"privyWalletAddress": "0x552874909A030344fC5eBB4E29A935E2bEe8B082"
+				"privyWalletId": "lydln2qshp11rpj5rpwdcm0r",
+				"privyWalletAddress": "0x6F50C3D365dD5979fbA9dF89665f154c0C36c181"
 			}
 		]
 	}
