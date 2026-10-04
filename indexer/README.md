@@ -85,7 +85,7 @@ Envio Cloud builds from the `envio` branch. Its settings are:
 
 The indexer is `proofbook` in org `proofbook-app`, created with the `envio-cloud` CLI (`npx envio-cloud@1.0.0 login` signs in through the GitHub CLI). `ENVIO_API_TOKEN` is set as an Envio Cloud env var.
 
-**Live endpoint (testnet, public, no key):** https://indexer.dev.hyperindex.xyz/71e3cf1/v1/graphql, deployment `7536a1b` (2026-09-30; the first was `64e37a0`). It synced to the testnet head in about a minute (~113k events). Each new deployment gets a new URL, so update this line, the root README and `ENVIO_GRAPHQL_URL` in `web/wrangler.jsonc` when it changes.
+**Live endpoint (testnet, public, no key):** https://indexer.dev.hyperindex.xyz/b818b96/v1/graphql, deployment `74c1eaf` (2026-10-04: the factories, the L3 registry and house agent #2000). Earlier: `7536a1b` (`/71e3cf1/`) and `64e37a0`. It synced to the testnet head in about a minute (~113k events). Each new deployment gets a new URL, so update this line, the root README and `ENVIO_GRAPHQL_URL` in `web/wrangler.jsonc` when it changes.
 
 ```bash
 npx envio-cloud@1.0.0 indexer get proofbook proofbook-app       # deployments and status
