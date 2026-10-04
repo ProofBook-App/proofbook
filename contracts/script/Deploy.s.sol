@@ -39,7 +39,8 @@ contract Deploy is Script {
             IKuruOrderBook(c.kuruMonUsdc),
             IERC20(c.usdc),
             IPerplExchange(c.perplExchange),
-            c.perplMonPerpId
+            c.perplMonPerpId,
+            c.kuruMaxHeld
         );
         registry = new AgentRegistry(IIdentityRegistry(c.identity), guardian, assets, factory);
         factory.setRegistry(address(registry));

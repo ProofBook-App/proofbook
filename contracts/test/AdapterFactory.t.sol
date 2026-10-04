@@ -79,6 +79,7 @@ contract AdapterFactoryTest is Test {
             IKuruOrderBook(address(0)),
             IERC20(address(0)),
             IPerplExchange(address(0)),
+            0,
             0
         );
         registry = new AgentRegistry(identity, makeAddr("guardian"), _assets(), factory);
@@ -195,7 +196,7 @@ contract AdapterFactoryTest is Test {
 
     function test_setRegistry_onceAndOnlyByTheDeployer() public {
         AdapterFactory f = new AdapterFactory(
-            IPerplExchange(address(ex)), IERC20(address(token)), IKuruOrderBook(address(0)), IERC20(address(0)), IPerplExchange(address(0)), 0
+            IPerplExchange(address(ex)), IERC20(address(token)), IKuruOrderBook(address(0)), IERC20(address(0)), IPerplExchange(address(0)), 0, 0
         );
         vm.prank(attacker);
         vm.expectRevert(abi.encodeWithSelector(AdapterFactory.NotDeployer.selector, attacker));

@@ -96,5 +96,6 @@ contract SimStack is Script {
         c.perplExchange = address(perpl);
         c.perplMonPerpId = real.perplMonPerpId;
         c.kuruMonUsdc = address(kuru);
+        c.kuruMaxHeld = 10_000e6;
     }
 }

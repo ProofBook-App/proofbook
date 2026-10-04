@@ -31,6 +31,9 @@ import {VaultBoundAdapter} from "./VaultBoundAdapter.sol";
 /// - Every fill must be within BAND of the reference. A compromised session key cannot dump
 ///   the vault into a counterparty's order at an off-market price.
 /// - If no fresh reference exists, trades revert and held MON is valued at 0 (NAV never reverts).
+/// - Held MON is capped at `maxHeld` (quote units, at the reference): a BUY that would take it past
+///   the cap reverts. Pricing uses the top of book, so it is only honest for a position the book can
+///   absorb; the cap is set per chain below the bid depth within BAND (docs/security-review.md, M4).
 ///
 /// Notional (invariant 2): BUY counts its quote amount; SELL counts the MON at the higher of the
 /// best bid and the reference.
@@ -48,6 +51,8 @@ contract KuruAdapter is VaultBoundAdapter, IVenueAdapter {
     IKuruOrderBook public immutable market;
     IPerplExchange public immutable priceReference;
     uint256 public immutable referencePerpId;
+    /// @notice Most MON this adapter may hold after a BUY, valued at the reference (quote units).
+    uint256 public immutable maxHeld;
 
     uint256 internal immutable _pricePrecision;
     uint256 internal immutable _sizePrecision;
@@ -63,13 +68,21 @@ contract KuruAdapter is VaultBoundAdapter, IVenueAdapter {
     error AmountNotRepresentable(uint256 amount);
     error NoReferencePrice();
     error PriceOutsideBand(uint256 paidOrValue, uint256 receivedOrValue);
+    error PositionTooLarge(uint256 heldValue, uint256 maxHeld);
+    error ZeroMaxHeld();
 
     /// @param market_ Kuru OrderBook with native MON base and `quote_` as quote.
     /// @param quote_ The vault asset (USDC for MON-USDC).
     /// @param reference_ Perpl Exchange; `referencePerpId_` is its MON perp (mainnet id 10).
-    constructor(IKuruOrderBook market_, IERC20 quote_, IPerplExchange reference_, uint256 referencePerpId_)
-        VaultBoundAdapter(quote_)
-    {
+    /// @param maxHeld_ Cap on held MON after a BUY, in quote units at the reference.
+    constructor(
+        IKuruOrderBook market_,
+        IERC20 quote_,
+        IPerplExchange reference_,
+        uint256 referencePerpId_,
+        uint256 maxHeld_
+    ) VaultBoundAdapter(quote_) {
+        if (maxHeld_ == 0) revert ZeroMaxHeld();
         (uint32 pp, uint96 sp, address base, uint256 baseDec, address quoteAsset, uint256 quoteDec,,,,,) =
             market_.getMarketParams();
         if (base != address(0) || baseDec != 18 || quoteAsset != address(quote_)) {
@@ -79,6 +92,7 @@ contract KuruAdapter is VaultBoundAdapter, IVenueAdapter {
         market = market_;
         priceReference = reference_;
         referencePerpId = referencePerpId_;
+        maxHeld = maxHeld_;
         _pricePrecision = pp;
         _sizePrecision = sp;
         _quoteScale = 10 ** quoteDec;
@@ -180,6 +194,8 @@ contract KuruAdapter is VaultBoundAdapter, IVenueAdapter {
         // Received MON must be worth at least (1 - BAND) of the quote paid, at the reference.
         uint256 got = _quoteFor(baseOut, ref, Math.Rounding.Floor);
         if (got * BPS < quoteAmount * (BPS - BAND_BPS)) revert PriceOutsideBand(quoteAmount, got);
+        uint256 held = _quoteFor(address(this).balance, ref, Math.Rounding.Ceil);
+        if (held > maxHeld) revert PositionTooLarge(held, maxHeld);
     }
 
     function _sell(uint256 baseAmount, uint256 minQuoteOut) internal returns (uint256 quoteOut) {

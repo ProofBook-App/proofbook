@@ -13,6 +13,8 @@ import {IKuruOrderBook} from "../../src/interfaces/external/IKuruOrderBook.sol";
 import {IPerplExchange} from "../../src/interfaces/external/IPerplExchange.sol";
 import {MockIdentityRegistry} from "../mocks/MockIdentityRegistry.sol";
 import {IKuruLimit, KuruSeed} from "./KuruSeed.sol";
+import {Test} from "forge-std/Test.sol";
+import {Chains} from "../../script/Chains.sol";
 
 /// @notice KuruAdapter against the live Kuru MON-USDC book, real USDC and Perpl's MON oracle on a
 /// Monad mainnet fork. Local simulation only: nothing is broadcast.
@@ -29,6 +31,7 @@ contract KuruAdapterForkTest is KuruSeed {
     uint8 constant BUY = 0; // KuruAdapter action ids
     uint8 constant SELL = 1;
     uint256 constant MAX_TRADE = 300e6;
+    uint256 constant MAX_HELD = 10_000e6; // script/Chains.sol mainnet
 
     address builder = makeAddr("builder");
     address sessionKey = makeAddr("sessionKey");
@@ -46,7 +49,7 @@ contract KuruAdapterForkTest is KuruSeed {
         MockIdentityRegistry identity = new MockIdentityRegistry();
         IERC20[] memory assets = new IERC20[](1);
         assets[0] = USDC;
-        AdapterFactory factory = new AdapterFactory(PERPL, AUSD, MON_USDC, USDC, PERPL, MON_PERP);
+        AdapterFactory factory = new AdapterFactory(PERPL, AUSD, MON_USDC, USDC, PERPL, MON_PERP, MAX_HELD);
         AgentRegistry registry = new AgentRegistry(identity, guardian, assets, factory);
         factory.setRegistry(address(registry));
 
@@ -113,9 +116,9 @@ contract KuruAdapterForkTest is KuruSeed {
 
     function test_constructor_rejectsWrongQuote() public {
         vm.expectRevert(abi.encodeWithSelector(KuruAdapter.UnsupportedMarket.selector, address(MON_USDC)));
-        new KuruAdapter(MON_USDC, AUSD, PERPL, MON_PERP);
+        new KuruAdapter(MON_USDC, AUSD, PERPL, MON_PERP, MAX_HELD);
         // MON-AUSD is a supported shape (native base, AUSD quote), just illiquid today.
-        new KuruAdapter(MON_AUSD, AUSD, PERPL, MON_PERP);
+        new KuruAdapter(MON_AUSD, AUSD, PERPL, MON_PERP, MAX_HELD);
     }
 
     function test_onlyVaultCanExecute() public {
@@ -296,5 +299,29 @@ contract KuruAdapterForkTest is KuruSeed {
         vm.prank(alice);
         vault.redeem(shares, alice, alice);
         assertApproxEqRel(USDC.balanceOf(alice), 1_000e6, 0.01e18, "frozen vault exits in full");
+    }
+}
+
+/// @notice M4: the mainnet `kuruMaxHeld` must be a position the live book can absorb. Selling that
+/// much MON at once on the unseeded MON-USDC book has to stay inside KuruAdapter's band. If this
+/// fails, the book has thinned and script/Chains.sol's cap needs lowering before the next deploy.
+contract KuruDepthForkTest is Test {
+    IKuruOrderBook constant MON_USDC = IKuruOrderBook(0x065C9d28E428A0db40191a54d33d5b7c71a9C394);
+    IPerplExchange constant PERPL = IPerplExchange(0x34B6552d57a35a1D042CcAe1951BD1C370112a6F);
+
+    function test_M4_theMainnetCapSellsWithinTheBand() public {
+        vm.createSelectFork(vm.envOr("MONAD_RPC_URL", string("https://rpc.monad.xyz")));
+        uint256 cap = Chains.get(Chains.MAINNET).kuruMaxHeld;
+        IPerplExchange.PerpetualInfo memory p = PERPL.getPerpetualInfo(10);
+        uint256 ref = p.oraclePNS * 1e18 / 10 ** p.priceDecimals; // USDC per MON, 1e18-scaled
+
+        uint256 mon = cap * 1e30 / ref / 1e8 * 1e8; // the cap's worth of MON, on Kuru's size grid
+        address seller = makeAddr("seller");
+        vm.deal(seller, mon);
+        vm.prank(seller);
+        uint256 got = MON_USDC.placeAndExecuteMarketSell{value: mon}(uint96(mon / 1e8), 0, false, false);
+
+        uint256 worth = mon * ref / 1e30;
+        assertGe(got * 10_000, worth * (10_000 - 300), "the whole cap sells within 3% of the reference");
     }
 }

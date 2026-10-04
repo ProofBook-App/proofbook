@@ -174,6 +174,7 @@ contract DeployForkTest is Test {
         kv.execute(ka, abi.encode(uint8(1), abi.encode(ka.balance / 1e8 * 1e8, uint256(0))));
         assertApproxEqRel(IERC20(c.usdc).balanceOf(address(kv)), 500e6, 0.003e18);
         assertEq(address(KuruAdapter(payable(ka)).market()), c.kuruMonUsdc);
+        assertEq(KuruAdapter(payable(ka)).maxHeld(), c.kuruMaxHeld);
     }
 
     /// AUSD packs {uint8 flags; uint248 balance} in one slot, so forge `deal` can't be used.

@@ -11,6 +11,7 @@ library Chains {
         address perplExchange;
         uint256 perplMonPerpId;
         address kuruMonUsdc; // 0 where Kuru v1 is not deployed
+        uint256 kuruMaxHeld; // KuruAdapter.maxHeld, quote units (6 dp)
     }
 
     uint256 internal constant MAINNET = 143;
@@ -24,6 +25,8 @@ library Chains {
             c.perplExchange = 0x34B6552d57a35a1D042CcAe1951BD1C370112a6F;
             c.perplMonPerpId = 10;
             c.kuruMonUsdc = 0x065C9d28E428A0db40191a54d33d5b7c71a9C394;
+            // On 2026-10-04 the bid side took $12.8k within 0.2% and $25.6k came out 8.5% short.
+            c.kuruMaxHeld = 10_000e6;
         } else if (chainId == TESTNET) {
             c.identity = 0x8004A818BFB912233c491871b3d84c89A494BD9e;
             c.ausd = 0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC; // Perpl testnet collateral
@@ -46,5 +49,6 @@ library Chains {
         c.perplExchange = 0xD7A49a32c77609305DA87411F7Ac34DC7c047683; // SimPerplExchange
         c.perplMonPerpId = 64;
         c.kuruMonUsdc = 0x4c49895eB85f5F20303B55AAa47474e031fe8318; // SimKuruOrderBook
+        c.kuruMaxHeld = 10_000e6;
     }
 }

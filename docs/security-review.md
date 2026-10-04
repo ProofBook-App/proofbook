@@ -43,6 +43,9 @@ C1 was confirmed by hand afterwards (`AgentRegistry._validate` and `AgentVault.e
 - **M3. The fee recipient can block withdrawals** (`AgentVault.sol:279-280`). `_takeFee` runs on every withdrawal in profit. If `ownerOf` reverts (a burned identity) or the token refuses the recipient (a blocklisted address), every such withdrawal reverts. Needs a test. Fix: accrue the fee to a claimable balance.
   - **Fix drafted, not deployed (2026-10-03):** `_takeFee` uses `try registry.ownerOf` and `trySafeTransfer`. If either fails, the fee stays pending and the high-water mark stays put, and the next flow after the recipient can receive pays it. While it's unpaid, the fee is recomputed on the shares that remain, so it shrinks a little with each withdrawal (20 to 18.47 after a 100 withdrawal in the test). The difference stays with the remaining backers. That already happened when the fee's cash sat at a venue.
 - **M4. Held MON is valued at the best bid regardless of size** (`KuruAdapter.sol:200-218`), so NAV overstates a position the book can't absorb. Fix: cap or haircut by size.
+  - **Fix drafted, not deployed (2026-10-04):** a cap rather than a haircut. `KuruAdapter.maxHeld` (set by the factory from `script/Chains.sol`) limits held MON, valued at the reference, after any BUY; a BUY that would pass it reverts with `PositionTooLarge`. Sells are never blocked, and a price rise that carries the position past the cap only stops further buying. The mainnet cap is $10,000: on 2026-10-04 the bid side took $12.8k within 0.2% and $25.6k came out 8.5% short. A haircut would still value MON the book can't absorb at the band floor, and walking the book in `nav()` costs gas on every withdrawal and can be moved within a transaction.
+  - Tests: `test/KuruPosition.t.sol` (5, sim book). `KuruDepthForkTest` sells the mainnet cap's worth of MON on the live, unseeded book and fails if that comes out more than 3% short, which means the cap needs lowering before the next deploy.
+  - Limit: the cap is fixed when the adapter is deployed. If the book thins later, existing adapters keep the old cap.
 
 ## Low
 
@@ -70,4 +73,4 @@ Honest adapters have no recipient parameters (Perpl `amountCNS` forced to 0, ord
 
 ## Before mainnet
 
-C1 must be fixed for any agent Proofbook doesn't run. H1, H2, M1, M2 and M3 should be fixed, or stated plainly in the README, before backers' real money goes in.
+C1 must be fixed for any agent Proofbook doesn't run. H1, H2 and M1 to M4 should be fixed, or stated plainly in the README, before backers' real money goes in.

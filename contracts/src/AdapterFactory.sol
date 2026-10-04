@@ -31,6 +31,8 @@ contract AdapterFactory is IAdapterFactory {
     IERC20 public immutable kuruQuote;
     IPerplExchange public immutable kuruReference;
     uint256 public immutable kuruReferencePerpId;
+    /// @dev KuruAdapter.maxHeld: held MON cap in quote units, below the book's bid depth within the band.
+    uint256 public immutable kuruMaxHeld;
 
     address public registry;
     mapping(address adapter => bool) public isCanonical;
@@ -50,7 +52,8 @@ contract AdapterFactory is IAdapterFactory {
         IKuruOrderBook kuruMarket_,
         IERC20 kuruQuote_,
         IPerplExchange kuruReference_,
-        uint256 kuruReferencePerpId_
+        uint256 kuruReferencePerpId_,
+        uint256 kuruMaxHeld_
     ) {
         deployer = msg.sender;
         perplExchange = perplExchange_;
@@ -59,6 +62,7 @@ contract AdapterFactory is IAdapterFactory {
         kuruQuote = kuruQuote_;
         kuruReference = kuruReference_;
         kuruReferencePerpId = kuruReferencePerpId_;
+        kuruMaxHeld = kuruMaxHeld_;
     }
 
     /// @notice One-time link to the registry, which is deployed after this factory (it takes the
@@ -81,7 +85,7 @@ contract AdapterFactory is IAdapterFactory {
     /// @notice A fresh KuruAdapter on the canonical market, valued against the canonical reference.
     function deployKuru() external returns (address adapter) {
         if (address(kuruMarket) == address(0)) revert VenueNotConfigured();
-        adapter = address(new KuruAdapter(kuruMarket, kuruQuote, kuruReference, kuruReferencePerpId));
+        adapter = address(new KuruAdapter(kuruMarket, kuruQuote, kuruReference, kuruReferencePerpId, kuruMaxHeld));
         _record(adapter, Kind.Kuru);
     }
 

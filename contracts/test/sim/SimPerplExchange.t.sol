@@ -282,7 +282,7 @@ contract SimPerplExchangeTest is Test {
         IERC20[] memory assets = new IERC20[](1);
         assets[0] = IERC20(address(token));
         AdapterFactory factory = new AdapterFactory(
-            IPerplExchange(address(ex)), IERC20(address(token)), IKuruOrderBook(address(0)), IERC20(address(0)), IPerplExchange(address(0)), 0
+            IPerplExchange(address(ex)), IERC20(address(token)), IKuruOrderBook(address(0)), IERC20(address(0)), IPerplExchange(address(0)), 0, 0
         );
         AgentRegistry registry = new AgentRegistry(identity, makeAddr("guardian"), assets, factory);
         factory.setRegistry(address(registry));

@@ -52,7 +52,7 @@ contract PerplAdapterForkTest is Test {
         MockIdentityRegistry identity = new MockIdentityRegistry();
         IERC20[] memory assets = new IERC20[](1);
         assets[0] = AUSD;
-        factory = new AdapterFactory(EX, AUSD, IKuruOrderBook(address(0)), IERC20(address(0)), EX, 10);
+        factory = new AdapterFactory(EX, AUSD, IKuruOrderBook(address(0)), IERC20(address(0)), EX, 10, 0);
         registry = new AgentRegistry(identity, guardian, assets, factory);
         factory.setRegistry(address(registry));
 

@@ -133,7 +133,7 @@ contract AdapterReliabilityTest is Test {
 
         identity = new MockIdentityRegistry();
         factory = new AdapterFactory(
-            IPerplExchange(address(ex)), ausd, IKuruOrderBook(address(book)), usdc, IPerplExchange(address(source)), KURU_MON
+            IPerplExchange(address(ex)), ausd, IKuruOrderBook(address(book)), usdc, IPerplExchange(address(source)), KURU_MON, 10_000e6
         );
         IERC20[] memory assets = new IERC20[](2);
         assets[0] = ausd;
