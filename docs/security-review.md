@@ -54,7 +54,7 @@ C1 was confirmed by hand afterwards (`AgentRegistry._validate` and `AgentVault.e
 - **L2.** A withdrawal after an intraday gain lowers `dayStartNav` by the absolute amount (`AgentVault.sol:307-309`). Example: start 1,000, NAV 2,000, withdraw 999: the floor drops to 0.9. Fix: scale it proportionally.
   - **Fix drafted, not deployed (2026-10-03):** a withdrawal (and a paid fee) scales `dayStartNav` by the share of NAV that stayed, so the day's gain or loss in percent doesn't change. In the review's case the baseline becomes 450.5 instead of 0. It also stops a withdrawal during a loss from making the loss look bigger (down 5% stayed 5%, where subtracting made it 9.5%). While a venue can't be priced NAV reads low, so it falls back to subtracting. Deposits still add the amount. Tests: `test/BaselineAndEntry.t.sol`.
 - **L3.** Anyone can crystallise the fee at a mark peak with `withdraw(0, x, x)`.
-  - **Fix drafted, not deployed (2026-10-04):** the fee is no longer crystallised at a mark.
+  - **Fixed on testnet (2026-10-04, registry `0xD791…b6cD`):** the fee is no longer crystallised at a mark.
     - An exit pays only the leaving shares' part of the pending fee. The gross share price and the high-water mark don't move, and the backers who stay keep owing their part. `withdraw(0)` pays nothing.
     - A deposit doesn't touch the fee. Above the mark, the mark is averaged with the entrant's price, so the fee owed stays the same and the entrant pays only on gains after joining. Below the mark it stays put: the owner, not existing backers, forgoes the fee on the entrant's recovery to it. A deposit into an empty vault starts the mark at the entrant's price. Before, rounding dust could leave the old mark below a new entrant's price and charge them a fee on joining (27.5 on 1,000 in the test). New event `HighWaterMarkSet`, indexed.
     - `crystallise()` (anyone) pays the whole fee, only while venues hold at most 0.1% of NAV (`FLAT_BPS`, for Kuru dust) and every venue can be priced. A flat vault has no mark to pick a peak of.
@@ -82,7 +82,7 @@ Honest adapters have no recipient parameters (Perpl `amountCNS` forced to 0, ord
 
 ## Deployment
 
-All drafted fixes except L3 went to testnet on 2026-10-04 (L3 was drafted after): AdapterFactory `0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f` and AgentRegistry `0x551fAE9567d5b66Bca89222732B9086eDB95DA4d` (README "Testnet deployments"). House agent #1 is still on the old registry. Nothing is on mainnet.
+Every fix, L3 included, is on testnet since 2026-10-04: AdapterFactory `0x369E379c963128C7a51ddA24CB8ec80DfBe0a481` and AgentRegistry `0xD791Bd907Ee2a1B327DB92a21660e118EDe5b6cD`, with house agent #1 re-entered as #2000 (README "Testnet deployments"). An earlier pair the same day (`0xbe37…359f`, `0x551f…DA4d`) has everything but L3. Nothing is on mainnet.
 
 ## Before mainnet
 

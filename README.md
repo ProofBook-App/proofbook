@@ -58,19 +58,29 @@ cd contracts && forge build && forge test -vvv
 
 ## Testnet deployments (10143)
 
-Deployed 2026-09-29, and the fixed factory and registry on 2026-10-04 (block 68020887). All source-verified on MonadVision (Sourcify). House agent #1 stays on the 2026-09-29 registry; the CLI, web and agents still point there. Explorer: https://testnet.monadvision.com
+Three generations, all source-verified on MonadVision (Sourcify). Explorer: https://testnet.monadvision.com
+
+- **2026-09-29:** registry `0x25D4…8ABC`, no factory, and the first house agent #1 (ERC-8004 #1951). #1951 is replaced by #2000 and stops trading when the agents Worker moves; its agentURI now points at `house-1-old.json` (`setAgentURI` tx `0xb5d662eb41c96c8e3a4fd851010cecf41d7497bc6abdc29025fa2554db21cc06`).
+- **2026-10-04, block 68020887:** factory and registry with every security fix except L3. Nothing entered.
+- **2026-10-04, block 68146772:** factory and registry with every fix including L3, and house agent #1 re-entered as ERC-8004 #2000 with the same limits. The CLI and the web app point here. The agents Worker moves once #2000's Privy wallet is set up.
 
 | Contract | Address | Deploy tx |
 |---|---|---|
 | AgentRegistry (guardian `0x3faE…9F51`, assets: testnet AUSD) | `0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC` | `0x2a5a5513f48d4d4114c852acf2cae7f3b4a6cbaf9d48eaf6a9d1bb5803f50329` |
-| House agent #1: ERC-8004 identity #1951 | IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0xe4d1718528eed37013f1a045e6e6d1a0d7a30e83f10290bcd03a2230b62fdae5` |
-| House agent #1: PerplAdapter | `0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09` | `0x831795948fd67f31baa2eb8c990822b5215c17671a1840d859cf1f2364a5b722` |
-| House agent #1: AgentVault "Proofbook Agent #1951" (AUSD, $100 max trade, $500/backer, 10% daily loss) | `0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53` | `enter` `0x44f6b948cae40080d172149dac15c242b384b8cf3fb2441a0aa882342cff9f25` |
-| House agent #1: adapter bound to vault | | `bind` `0x3e04ace2009957449d600de04a0032c6b77356306f2f434ef1fdf8b5ebf23933` |
-| AdapterFactory (security fixes, 2026-10-04; Perpl only, no Kuru on testnet) | `0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f` | `0xfc62aaa2a0b02d7f055fd3e17bdc4d97cebbad528f698c25b31b4a5fe901e6e4` |
-| AgentRegistry (security fixes, 2026-10-04; accepts only the factory's adapters; guardian `0x3faE…9F51`, assets: testnet AUSD) | `0x551fAE9567d5b66Bca89222732B9086eDB95DA4d` | `0x9fcf3dabfacc273413f105cf8edb474bf7e4e00e2362ccabded5cbbe9ec0142a`, `setRegistry` `0xfb37059389154e4f989212ce83ad298754f3c90e1678d87f97a4f458d905b481` |
+| #1951 (first house agent #1, retired): ERC-8004 identity #1951 | IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0xe4d1718528eed37013f1a045e6e6d1a0d7a30e83f10290bcd03a2230b62fdae5` |
+| #1951 (first house agent #1, retired): PerplAdapter | `0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09` | `0x831795948fd67f31baa2eb8c990822b5215c17671a1840d859cf1f2364a5b722` |
+| #1951 (first house agent #1, retired): AgentVault "Proofbook Agent #1951" (AUSD, $100 max trade, $500/backer, 10% daily loss) | `0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53` | `enter` `0x44f6b948cae40080d172149dac15c242b384b8cf3fb2441a0aa882342cff9f25` |
+| #1951 (first house agent #1, retired): adapter bound to vault | | `bind` `0x3e04ace2009957449d600de04a0032c6b77356306f2f434ef1fdf8b5ebf23933` |
+| AdapterFactory (security fixes but L3, 2026-10-04; Perpl only, no Kuru on testnet) | `0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f` | `0xfc62aaa2a0b02d7f055fd3e17bdc4d97cebbad528f698c25b31b4a5fe901e6e4` |
+| AgentRegistry (security fixes but L3, 2026-10-04; accepts only the factory's adapters; guardian `0x3faE…9F51`, assets: testnet AUSD) | `0x551fAE9567d5b66Bca89222732B9086eDB95DA4d` | `0x9fcf3dabfacc273413f105cf8edb474bf7e4e00e2362ccabded5cbbe9ec0142a`, `setRegistry` `0xfb37059389154e4f989212ce83ad298754f3c90e1678d87f97a4f458d905b481` |
+| AdapterFactory (every fix incl. L3, 2026-10-04; Perpl only) | `0x369E379c963128C7a51ddA24CB8ec80DfBe0a481` | `0x3b1ce7f6eaa3a6d8110ab990dfc61ac139444314809a5cb8a1eb890682f1f399` |
+| AgentRegistry (every fix incl. L3, 2026-10-04; guardian `0x3faE…9F51`, assets: testnet AUSD) | `0xD791Bd907Ee2a1B327DB92a21660e118EDe5b6cD` | `0x609961e720fecdd9629ce6e4600da6c30c219646ee13c0b10aaf1aebd488ee0b`, `setRegistry` `0x6d5b59bfeedf608b208d3726b18bad85d144ce3a15d3fb81843d73ec239e68be` |
+| House agent #1 (current): ERC-8004 identity #2000, agentURI `https://proofbook.app/agents/house-1.json` | IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0xc7aad479878938fece7c1d949c34ad19f9904480d69c1aa3c7405773fd2373c2` |
+| House agent #1 (current): PerplAdapter, from the factory | `0x4D91674bA9263e10fBEB9c610606fF6EF82B39cD` | `deployPerpl` `0xa4c516394e8da5fa2900e39af87affda5e604193114a0304d3f61422d03bd6eb` |
+| House agent #1 (current): AgentVault "Proofbook Agent #2000" (AUSD, $100 max trade, $500/backer, 10% daily loss); `enter` also binds the adapter | `0x6b2a2F80172C5cB83702A155F1cBFBA9845276Df` | `enter` `0x7b48d70fd2d6d70b212abd13364bce6371e327db0a0a3a04383d4a3cccd1f0e9` |
+| House agent #1 (current): first deposit, 400 AUSD from the deployer (CLI `agent fund 2000 400`) | | `approve` `0xa9ee3c30e12376baab3c008afb5fc788155172a25d2d25d58ca2f99d5d0510f3`, `deposit` `0xaacd2c0da6d499cf277a152e542aa30080aaf2bf295f2b3919aa6d6439e0dd9d` |
 
-Session key (house agent #1): the Privy server wallet `0x552874909A030344fC5eBB4E29A935E2bEe8B082` since 2026-10-03 (`rotateSessionKey` tx `0xba832e0a1bcc648d85d070f03effd54d0bc0eb0a262fadc9144c1148fffaaeac`, block 67803146), funded with 0.3 test MON for gas (tx `0xe7c8c6471808de06356e1fa62a3bb39672d49995660e907f8cd96fe9ef96eea1`). Before that, `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`, which signed the trades below. First autonomous trade, decided by Kimi K2.6 and signed through Privy: close of the 1,828-lot MON long ("30-minute change is -73 bps, below the -50 bps threshold"), tx `0x0afe114db82e1bacc671ebd1f1d609fcbc8d947abec855ab9066a1fadbdb2749`, block 67830730, 590,385 gas. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
+Session key of #2000: the deployer `0x3faE…9F51` until its Privy wallet is set up (agents/README.md, Going live). Session key of #1951: the Privy server wallet `0x552874909A030344fC5eBB4E29A935E2bEe8B082` since 2026-10-03 (`rotateSessionKey` tx `0xba832e0a1bcc648d85d070f03effd54d0bc0eb0a262fadc9144c1148fffaaeac`, block 67803146), funded with 0.3 test MON for gas (tx `0xe7c8c6471808de06356e1fa62a3bb39672d49995660e907f8cd96fe9ef96eea1`). Before that, `0xB41aEdF1B50eFFA4862B6D568ebBA5b72F9D2Bf2`, which signed the trades below. First autonomous trade, decided by Kimi K2.6 and signed through Privy: close of the 1,828-lot MON long ("30-minute change is -73 bps, below the -50 bps threshold"), tx `0x0afe114db82e1bacc671ebd1f1d609fcbc8d947abec855ab9066a1fadbdb2749`, block 67830730, 590,385 gas. Perpl testnet Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`.
 
 **First real Perpl trade (2026-09-30).** After Agora refilled its testnet faucet (`requestFunds`, 10,000 AUSD: `0x7164ee723e593acdcc62bc1f7a0d099c17ef7619fc23e9e16ab8695dcbd6e8f7`), `script/SimDemo.s.sol` ran against house agent #1 on the real Perpl testnet Exchange:
 
@@ -239,7 +249,7 @@ forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --private-k
 forge script script/HouseAgent.s.sol --rpc-url monad_testnet --broadcast --private-key $DEPLOYER_PK --slow
 ```
 
-`Deploy.s.sol` deploys the `AdapterFactory` (the chain's canonical Perpl and Kuru addresses), then the registry, which accepts only the factory's adapters, then links the two. `HouseAgent.s.sol` gets its adapter from `factory.deployPerpl()`/`deployKuru()`, and `enter` binds it. Registries deployed before 2026-10-03, including house agent #1's testnet registry, have no factory (security review C1). The fixed testnet registry is `0x551f…DA4d` (2026-10-04). `script/Chains.sol` holds the per-chain addresses. Kuru v1 is mainnet-only, so `VENUE=kuru` works on 143 only, or on testnet with `SIM=true`. `test/fork/Deploy.fork.t.sol` runs every script on testnet and mainnet forks.
+`Deploy.s.sol` deploys the `AdapterFactory` (the chain's canonical Perpl and Kuru addresses), then the registry, which accepts only the factory's adapters, then links the two. `HouseAgent.s.sol` gets its adapter from `factory.deployPerpl()`/`deployKuru()`, and `enter` binds it. Registries deployed before 2026-10-03, including the first testnet registry (`0x25D4…8ABC`, #1951), have no factory (security review C1). The current testnet registry is `0xD791…b6cD` (2026-10-04, every fix including L3). `script/Chains.sol` holds the per-chain addresses. Kuru v1 is mainnet-only, so `VENUE=kuru` works on 143 only, or on testnet with `SIM=true`. `test/fork/Deploy.fork.t.sol` runs every script on testnet and mainnet forks.
 
 Testnet sim stack (testnet only):
 
