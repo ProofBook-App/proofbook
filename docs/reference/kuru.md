@@ -33,6 +33,7 @@ Source: https://docs.kuru.io/contracts/Contract-addresses
 - ⚠️ **MON-AUSD is dead (2026-09-29).** `bestBidAsk()` = (max, 0), meaning no bid and no ask. The book is empty, the AMM vault is empty, and the last trade was 2026-09-02. A market order reverts with `InsufficientLiquidity`. **Every AUSD-quoted Kuru market is idle.** The liquid stablecoin markets are USDC-quoted: MON-USDC, WETH-USDC `0xa6afd386…`, cbBTC-USDC `0x40c49f17…`, XAUt0-USDC `0x851145ea…` (params from the Kuru API, not checked with `cast`).
 - Taker and maker fees are currently 0 bps on both official markets. Gas: a market sell ≈ 320–540k and a market buy ≈ 800k, so set tight limits.
 - Because the base asset is native MON, a vault trading this market needs `receive()` and must value MON in NAV.
+- **The MON-USDC book is thin (2026-10-04, MON ≈ $0.034).** Against Perpl's MON oracle a market buy slipped 0.9% at $10, 2.6% at $100 and 3.1% at $200, past KuruAdapter's 3% band. The spread was 1.4% (bid 0.0340, ask 0.0345). Fork tests rest a maker's bid and ask at the top of book first (`contracts/test/fork/KuruSeed.sol`). A live Kuru agent should keep trades under about $100.
 
 ## MON-USDC market params (read onchain ✅ 2026-09-29)
 

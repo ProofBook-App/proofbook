@@ -13,7 +13,7 @@ paths:
 - **AUSD has 6 decimals.** Guard the ERC-4626 vault against first-depositor inflation with OpenZeppelin `_decimalsOffset()`, and write a test for it.
 - **Do not deploy our own ERC-8004 registry.**
   - Builders register with the canonical IdentityRegistry themselves.
-  - `AgentRegistry.enter(agentId, envelope)` checks `isAuthorizedOrOwner(msg.sender, agentId)`.
+  - `AgentRegistry.enter(agentId, envelope)` checks `ownerOf(agentId) == msg.sender` (approved operators are refused, security review L4).
   - The reason is that `register()` mints to `msg.sender`. See `docs/reference/erc-8004.md`.
 - **Kuru:**
   - Funds must sit in the Kuru MarginAccount before a limit order is placed.
