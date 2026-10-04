@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IKuruOrderBook} from "../../src/interfaces/external/IKuruOrderBook.sol";
 import {IPerplExchange} from "../../src/interfaces/external/IPerplExchange.sol";
 import {SimKuruOrderBook} from "../../src/sim/SimKuruOrderBook.sol";
 import {SimPerplExchange} from "../../src/sim/SimPerplExchange.sol";
 import {SimToken} from "../../src/sim/SimToken.sol";
+import {KuruSeed} from "./KuruSeed.sol";
 
 /// @notice Runs the same calls against a real venue and its sim on a fork, and checks they behave the
 /// same: same revert selectors and arguments, same position semantics, and the same margin model
 /// (checked against the real Exchange's own numbers). Local simulation only: nothing is broadcast.
-contract SimParityForkTest is Test {
+contract SimParityForkTest is KuruSeed {
     uint256 constant MON_TESTNET = 64;
     uint8 constant OPEN_LONG = 0;
     uint8 constant OPEN_SHORT = 1;
@@ -163,6 +163,8 @@ contract SimParityForkTest is Test {
         SimKuruOrderBook sim = new SimKuruOrderBook(token, perpl, 10, 65, address(this));
         token.setMinter(address(sim), true);
         vm.deal(address(sim), 100_000 ether);
+        // Compare the sim with the real top of book, not with however thin the live book is today.
+        _seedKuruBook(real, usdc, 10_000);
 
         // Same market params apart from the quote token.
         (bool okR, bytes memory r) = address(real).staticcall(abi.encodeCall(IKuruOrderBook.getMarketParams, ()));
@@ -175,9 +177,11 @@ contract SimParityForkTest is Test {
         vm.deal(trader, 10_000 ether);
         (uint256 rBase, uint256 rQuote) = _kuruScenario(real, usdc);
         (uint256 sBase, uint256 sQuote) = _kuruScenario(IKuruOrderBook(address(sim)), IERC20(address(token)));
-        // Same trades, prices within 1% (sim is centred on Perpl's MON mark, not Kuru's book).
-        assertApproxEqRel(sBase, rBase, 0.01e18, "MON for $10");
-        assertApproxEqRel(sQuote, rQuote, 0.01e18, "USDC for 100 MON");
+        // The sim quotes a tight spread around Perpl's MON mark; the real book has its own spread
+        // (1.4% wide on 2026-10-04). _kuruScenario checks each fills at its own top of book. Across
+        // venues the bound that matters is KuruAdapter's 3% band around that same mark.
+        assertApproxEqRel(sBase, rBase, 0.03e18, "MON for $10");
+        assertApproxEqRel(sQuote, rQuote, 0.03e18, "USDC for 100 MON");
     }
 
     function _kuruScenario(IKuruOrderBook m, IERC20 quote) internal returns (uint256 baseOut, uint256 quoteOut) {
@@ -192,7 +196,9 @@ contract SimParityForkTest is Test {
         baseOut = m.placeAndExecuteMarketBuy(10e8, 0, false, true);
         assertEq(q0 - quote.balanceOf(trader), 10e6, "spends exactly the quote size");
         assertEq(baseOut % 1e8, 0, "base rounded to size precision");
+        assertApproxEqRel(baseOut, 10 * 1e36 / ask, 0.001e18, "$10 buys at the best ask");
         quoteOut = m.placeAndExecuteMarketSell{value: 100 ether}(100e10, 0, false, true);
+        assertApproxEqRel(quoteOut, 100 * bid / 1e12, 0.001e18, "100 MON sells at the best bid");
 
         _expectRevertSel(
             address(m),
