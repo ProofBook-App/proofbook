@@ -26,7 +26,7 @@ export const NETWORKS: Record<NetworkName, Network> = {
     chainId: 10143,
     rpc: "https://testnet-rpc.monad.xyz",
     explorer: "https://testnet.monadvision.com",
-    registry: "0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC",
+    registry: "0xD791Bd907Ee2a1B327DB92a21660e118EDe5b6cD", // 2026-10-04, security fixes incl. L3 (README, Testnet)
     identity: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
     ausd: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
     perplExchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",

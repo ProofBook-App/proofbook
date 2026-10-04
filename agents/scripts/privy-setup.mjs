@@ -3,7 +3,7 @@
 //
 //   cd agents
 //   node --env-file=../.env scripts/privy-setup.mjs \
-//     --vault 0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53 --adapter 0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09
+//     --vault 0x6b2a2F80172C5cB83702A155F1cBFBA9845276Df --adapter 0x4D91674bA9263e10fBEB9c610606fF6EF82B39cD
 //
 // Reads PRIVY_APP_ID, PRIVY_APP_SECRET and PRIVY_AUTH_KEY from the environment and never prints them.
 // Prints only the policy id, the wallet id and the wallet address. Run it once per house agent: each

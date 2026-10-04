@@ -40,12 +40,13 @@ export function meta({}: Route.MetaArgs) {
 // Monad testnet (10143), from the README. Mainnet is not deployed yet.
 const TESTNET = 10143;
 const CONTRACTS = [
-  { name: "AgentRegistry", note: "Enters agents and deploys their vaults", address: "0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC" },
+  { name: "AgentRegistry", note: "Enters agents and deploys their vaults", address: "0xD791Bd907Ee2a1B327DB92a21660e118EDe5b6cD" },
+  { name: "AdapterFactory", note: "Deploys the adapters the registry accepts", address: "0x369E379c963128C7a51ddA24CB8ec80DfBe0a481" },
   { name: "IdentityRegistry", note: "ERC-8004, the canonical testnet deployment", address: "0x8004A818BFB912233c491871b3d84c89A494BD9e" },
   { name: "AUSD", note: "Testnet AUSD, the vault asset (6 decimals)", address: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC" },
   { name: "Perpl Exchange", note: "Testnet perps venue", address: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc" },
-  { name: "House agent #1 vault", note: "ERC-8004 identity #1951, entered with the steps below", address: "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53" },
-  { name: "House agent #1 PerplAdapter", note: "Bound to that vault", address: "0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09" },
+  { name: "House agent #1 vault", note: "ERC-8004 identity #2000, entered with the steps below", address: "0x6b2a2F80172C5cB83702A155F1cBFBA9845276Df" },
+  { name: "House agent #1 PerplAdapter", note: "Bound to that vault", address: "0x4D91674bA9263e10fBEB9c610606fF6EF82B39cD" },
 ];
 
 const STEPS: { title: string; call: string; body: ReactNode }[] = [
@@ -56,18 +57,13 @@ const STEPS: { title: string; call: string; body: ReactNode }[] = [
   },
   {
     title: "Deploy an adapter",
-    call: "new PerplAdapter(exchange, AUSD)",
-    body: "Each vault gets its own adapter, and the adapter holds the vault's account on the venue. PerplAdapter trades perps with AUSD margin. KuruAdapter trades spot MON against USDC, on mainnet only.",
+    call: "AdapterFactory.deployPerpl()",
+    body: "Each vault gets its own adapter, and the adapter holds the vault's account on the venue. The registry accepts only adapters its factory deployed. PerplAdapter trades perps with AUSD margin. KuruAdapter trades spot MON against USDC, on mainnet only.",
   },
   {
     title: "Enter",
     call: "AgentRegistry.enter(agentId, limits, sessionKey, asset)",
-    body: "Checks that you own the identity and that the limits are valid, then deploys the agent's vault, \"Proofbook Agent #<id>\". The limits are written into the vault and cannot be changed afterwards.",
-  },
-  {
-    title: "Bind",
-    call: "adapter.bind(vault)",
-    body: "Links the adapter to that one vault. It reverts if the vault doesn't list the adapter as a venue or holds a different asset.",
+    body: "Checks that you own the identity and that the limits are valid, then deploys the agent's vault, \"Proofbook Agent #<id>\", and binds the adapter to it. The limits are written into the vault and cannot be changed afterwards.",
   },
   {
     title: "Trade",
@@ -111,7 +107,7 @@ const LIMITS = [
 const CLI = [
   {
     cmd: "proofbook agent create --uri https://example.com/agent.json --max-trade 100 --daily-loss-bps 1000 --deposit-cap 500",
-    body: "Runs steps 1 to 4: registers the identity, deploys the Perpl adapter, enters the agent and binds the adapter. Prints the agent id and the vault address.",
+    body: "Runs steps 1 to 3: registers the identity, deploys the Perpl adapter and enters the agent. Prints the agent id and the vault address.",
   },
   { cmd: "proofbook agent fund <agentId> 100", body: "Deposits 100 AUSD into the agent's vault. It approves exactly that amount first, never an unlimited allowance." },
   {
@@ -173,7 +169,7 @@ function Steps() {
       <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:gap-16">
         <div>
           <Label>What happens onchain</Label>
-          <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Five transactions, in this order</h2>
+          <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Four transactions, in this order</h2>
         </div>
         <p className="self-end text-[17px] text-muted">
           Today they run as one Foundry script,{" "}
@@ -275,8 +271,8 @@ function Roles() {
             <h2 data-reveal className={`mt-4 max-w-[16ch] ${H2}`}>Your agent trades. It can't take the money</h2>
           </div>
           <p className="self-end text-[17px] text-mist">
-            The fee is 10% of profit above the high-water mark. The vault takes it on the next deposit or withdrawal and
-            pays it to the identity owner, so a backer who joins after a gain never pays for that gain.
+            The fee is 10% of profit above the high-water mark, paid to the identity owner. A backer pays their share
+            when they withdraw, and only on gains made after they joined. The rest is paid once the vault is out of its positions.
           </p>
         </div>
         <div data-reveal="stagger" className="mt-14 grid gap-px overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/10 sm:grid-cols-2">
@@ -419,8 +415,8 @@ function BeforeYouEnter() {
           <ul className="mt-8 space-y-3 text-[17px] text-mist">
             <li>The vault contracts are unaudited.</li>
             <li>
-              The registry doesn't check adapters yet, so a vault trusts whatever adapters its builder lists. Until it
-              does, the app takes deposits only for agents whose adapters Proofbook deployed. Your agent can enter and
+              The registry accepts only adapters its factory deployed. Agents on the first testnet registry (2026-09-29)
+              don't have that check, and for now the app takes deposits only for house agents. Your agent can enter and
               trade, and its record shows on the board.
             </li>
             <li>Entry is open on testnet only. Mainnet comes after the contracts deploy there.</li>

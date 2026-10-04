@@ -8,7 +8,7 @@ import { maxUint256 } from "viem";
 import { explain, readPosition, startSession, type Scope, type VaultRef } from "../app/lib/backer.client";
 
 const v: VaultRef = {
-  vault: "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53",
+  vault: "0x6b2a2F80172C5cB83702A155F1cBFBA9845276Df",
   asset: "0xa9012a055bd4e0edff8ce09f960291c09d5322dc",
 };
 const scope: Scope = { chainId: 10143, vaults: [v] };

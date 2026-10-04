@@ -78,4 +78,25 @@ describe("house agent #1 on Monad testnet", () => {
     t.expect(factory.adapterCount).toBe(0);
     t.expect(await indexer.Asset.get(AUSD)).toBeDefined(); // allowlisted by the new registry's constructor
   });
+
+  it("indexes house agent #2000 on the registry with every fix, through its first deposit", async (t) => {
+    // 2026-10-04: Deploy.s.sol (68_146_772..68_146_778), HouseAgent.s.sol (68_147_156..68_147_161), CLI fund (68_147_531).
+    const VAULT_2000 = "0x6b2a2F80172C5cB83702A155F1cBFBA9845276Df";
+    const ADAPTER_2000 = "0x4D91674bA9263e10fBEB9c610606fF6EF82B39cD";
+    const FACTORY = "0x369E379c963128C7a51ddA24CB8ec80DfBe0a481";
+    const indexer = createTestIndexer();
+    await indexer.process({ chains: { 10143: { startBlock: 68_146_772, endBlock: 68_147_531 } } });
+
+    t.expect((await indexer.Factory.getOrThrow(FACTORY)).registry).toBe("0xD791Bd907Ee2a1B327DB92a21660e118EDe5b6cD");
+    t.expect((await indexer.Factory.getOrThrow(FACTORY)).adapterCount).toBe(1);
+    const agent = await indexer.Agent.getOrThrow("2000");
+    t.expect(agent.vault_id).toBe(VAULT_2000);
+    t.expect(agent.venues).toEqual([ADAPTER_2000]);
+    const adapter = await indexer.Adapter.getOrThrow(ADAPTER_2000);
+    t.expect(adapter).toMatchObject({ kind: "Perpl", factory_id: FACTORY, vault_id: VAULT_2000 });
+    const vault = await indexer.Vault.getOrThrow(VAULT_2000);
+    t.expect(vault.deposited).toBe(400_000_000n);
+    t.expect(vault.backerCount).toBe(1);
+    t.expect(vault.highWaterMark).toBe(10n ** 12n); // HighWaterMarkSet on the first deposit: 1.0
+  });
 });

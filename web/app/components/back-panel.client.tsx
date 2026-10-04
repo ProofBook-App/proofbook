@@ -385,7 +385,7 @@ export default function BackPanel(props: BackPanelProps) {
       <Shell title="Back this agent">
         {!props.verified && (
           <p className="mb-4 rounded-lg bg-limit/10 px-4 py-3 text-[14px] text-limit">
-            Deposits are off. Proofbook hasn't verified this agent's adapters, and the contracts don't check them yet.
+            Deposits are off. For now the app takes deposits only for Proofbook's house agents.
           </p>
         )}
         <p className="text-[15px] text-muted">
@@ -403,7 +403,7 @@ export default function BackPanel(props: BackPanelProps) {
     <Shell title={p && p.shares > 0n ? "Your position" : "Back this agent"}>
       {!props.verified && (
           <p className="mb-4 rounded-lg bg-limit/10 px-4 py-3 text-[14px] text-limit">
-            Deposits are off. Proofbook hasn't verified this agent's adapters, and the contracts don't check them yet.
+            Deposits are off. For now the app takes deposits only for Proofbook's house agents.
           </p>
         )}
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

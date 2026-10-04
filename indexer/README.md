@@ -8,8 +8,8 @@ The registries, the factory and the Perpl Exchange are the only hard-coded addre
 
 | Contract | Registered from | Events |
 |---|---|---|
-| AdapterFactory `0xbe37…359f` (testnet) | config | `RegistrySet`, `AdapterDeployed` |
-| AgentRegistry `0x25D4…8ABC` and `0x551f…DA4d` (testnet) | config | `AssetAllowed`, `AgentRegistered`, `VaultLinked` |
+| AdapterFactory `0xbe37…359f` and `0x369E…a481` (testnet) | config | `RegistrySet`, `AdapterDeployed` |
+| AgentRegistry `0x25D4…8ABC`, `0x551f…DA4d` and `0xD791…b6cD` (testnet) | config | `AssetAllowed`, `AgentRegistered`, `VaultLinked` |
 | AgentVault | `VaultLinked` | ERC-4626 `Deposit`/`Withdraw`, share `Transfer`, `Executed`, `PolicyBreach`, `Frozen`, `Unfrozen`, `FeeTaken`, `SessionKeyRotated`, `DayRolled` |
 | PerplExchange `0x1964…80cc` (testnet) | config | position, fill and mark events (below) |
 | VenueAdapter (Perpl and Kuru) | `AgentRegistered` `envelope.venues` | `Bound`, Perpl `MarginDeposited`/`MarginWithdrawn`/`Recalled`/`PerpTracked`/`OrderSent`, Kuru `Bought`/`Sold`/`Unwound` |

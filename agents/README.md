@@ -52,7 +52,7 @@ All three need credentials, so the human runs them. Nothing here touches mainnet
 1. **Privy policy and wallet**:
    ```bash
    cd agents
-   node --env-file=../.env scripts/privy-setup.mjs --vault 0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53 --adapter 0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09
+   node --env-file=../.env scripts/privy-setup.mjs --vault 0x6b2a2F80172C5cB83702A155F1cBFBA9845276Df --adapter 0x4D91674bA9263e10fBEB9c610606fF6EF82B39cD
    ```
    The script prints the policy id, wallet id and address, then a sign-only policy check: `execute(adapter)` should be signed and `execute(0x…dEaD)` should get `policy_violation`. If both are denied, Privy's `execute.venue` address match didn't work as assumed; rerun with `--no-venue-rule`. Then put `privyWalletId` and `privyWalletAddress` into `HOUSE_AGENTS` in `wrangler.jsonc`.
 2. **Rotate the session key and fund the wallet**:
@@ -87,7 +87,7 @@ cd agents && node --env-file=../.env scripts/privy-setup.mjs --vault <vault> --a
 AGENT_ID=<agentId> VAULT=<vault> PRIVY_WALLET=<wallet address> AMOUNT=0.5 ./scripts/rotate-and-fund.sh
 ```
 
-Repeat with `house-3.json` for the control. Then add each agent to `HOUSE_AGENTS` in `wrangler.jsonc`, with the same fields as #1951 plus `"strategy": "mean-reversion"` or `"strategy": "random"`, its `label`, and the Privy wallet id and address. Label it in `web/app/lib/agents.ts` with `slug: "house-2"` (or `house-3`) and its one-line strategy. That makes its agentURI, `https://proofbook.app/agents/house-2.json`, serve the ERC-8004 registration file. Then deploy both Workers. Agents on the same perp share the mark history in `perp_marks`.
+Repeat with `house-3.json` for the control. Then add each agent to `HOUSE_AGENTS` in `wrangler.jsonc`, with the same fields as #2000 plus `"strategy": "mean-reversion"` or `"strategy": "random"`, its `label`, and the Privy wallet id and address. Label it in `web/app/lib/agents.ts` with `slug: "house-2"` (or `house-3`) and its one-line strategy. That makes its agentURI, `https://proofbook.app/agents/house-2.json`, serve the ERC-8004 registration file. Then deploy both Workers. Agents on the same perp share the mark history in `perp_marks`.
 
 ## Notes
 

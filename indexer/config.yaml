@@ -68,7 +68,8 @@ contracts:
       - event: PositionUnwoundWithoutPaymentV2
 chains:
   # Monad testnet, real Perpl testnet. Registry 0x25D4…8ABC (block 66759038, no factory, house agent #1951),
-  # then factory 0xbe37…359f and registry 0x551f…DA4d with the security fixes (block 68020887, 2026-10-04).
+  # then factory 0xbe37…359f and registry 0x551f…DA4d with the security fixes but L3 (block 68020887), then
+  # factory 0x369E…a481 and registry 0xD791…b6cD with all of them (block 68146772, house agent #2000), 2026-10-04.
   - id: 10143
     start_block: 66759038
     # Data source: HyperSync (https://10143.hypersync.xyz), needs ENVIO_API_TOKEN in indexer/.env.
@@ -76,10 +77,12 @@ chains:
       - name: AdapterFactory
         address:
           - 0xbe37764D6e2Ea535744C851A8133eb8Fef2C359f
+          - 0x369E379c963128C7a51ddA24CB8ec80DfBe0a481
       - name: AgentRegistry
         address:
           - 0x25D4934840Ce6fFE1a1b0bbb7814aDB5623a8ABC
           - 0x551fAE9567d5b66Bca89222732B9086eDB95DA4d
+          - 0xD791Bd907Ee2a1B327DB92a21660e118EDe5b6cD
       - name: AgentVault
       - name: VenueAdapter
       - name: PerplExchange
