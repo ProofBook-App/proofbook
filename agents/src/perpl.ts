@@ -5,6 +5,7 @@ import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, 
 
 /** PerplAdapter actions (contracts/src/adapters/PerplAdapter.sol). */
 export const DEPOSIT = 0;
+export const WITHDRAW = 1;
 export const ORDER = 2;
 /** Perpl order types (docs/reference/perpl.md). */
 export const OPEN_LONG = 0;
@@ -28,6 +29,11 @@ export const executeAbi = parseAbi(["function execute(address venue, bytes data)
 /** Adapter calldata for a margin deposit (the first one opens the Perpl account). */
 export function marginData(amount: bigint): Hex {
   return encodeAbiParameters(adapterCallParams, [DEPOSIT, encodeAbiParameters([{ type: "uint256" }], [amount])]);
+}
+
+/** Adapter calldata that moves free Perpl margin back to the vault (quoted at 0 notional). */
+export function withdrawData(amount: bigint): Hex {
+  return encodeAbiParameters(adapterCallParams, [WITHDRAW, encodeAbiParameters([{ type: "uint256" }], [amount])]);
 }
 
 /** Adapter calldata for an IOC Perpl order at 1x. */

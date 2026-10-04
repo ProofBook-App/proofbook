@@ -24,6 +24,8 @@ export type HouseAgent = {
   lookbackMinutes: number;
   privyWalletId?: string;
   privyWalletAddress?: Address;
+  /** Close-only: never opens, closes on the strategy's own close rule, then returns free margin to the vault. */
+  windDown?: boolean;
 };
 
 export type Config = {
@@ -78,6 +80,7 @@ function parseAgent(a: Raw): HouseAgent {
     lookbackMinutes: Number(a.lookbackMinutes),
     privyWalletId: a.privyWalletId ? String(a.privyWalletId) : undefined,
     privyWalletAddress: isAddress(wallet) ? getAddress(wallet) : undefined,
+    windDown: a.windDown === true,
   };
   if (!STRATEGIES.includes(agent.strategy)) {
     throw new Error(`house agent ${agent.agentId}: strategy must be one of ${STRATEGIES.join(", ")}`);

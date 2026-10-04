@@ -3,12 +3,24 @@
 // Needs the CLI built: `pnpm test` runs `pnpm --filter proofbook build` first.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Proofbook } from "proofbook";
-import { buyPrice, CLOSE_LONG, executeCalldata, lotsFor, marginData, notionalOf, OPEN_LONG, orderData, sellPrice } from "../src/perpl.ts";
+import { Proofbook, WITHDRAW as CLI_WITHDRAW } from "proofbook";
+import { decodeAbiParameters } from "viem";
+import { adapterCallParams, buyPrice, CLOSE_LONG, executeCalldata, lotsFor, marginData, notionalOf, OPEN_LONG, orderData, sellPrice, WITHDRAW, withdrawData } from "../src/perpl.ts";
 
 test("margin deposit calldata matches the CLI", () => {
   for (const amount of [0n, 1n, 100_000_000n, 2n ** 200n]) {
     assert.equal(marginData(amount), Proofbook.marginData(amount));
+  }
+});
+
+test("margin withdraw calldata is the deposit's shape with the adapter's WITHDRAW action", () => {
+  // The CLI has no withdraw encoder, so this pins the action to the CLI's constant and the deposit layout.
+  assert.equal(WITHDRAW, CLI_WITHDRAW);
+  for (const amount of [0n, 1n, 80_120_000n, 2n ** 200n]) {
+    const [action, payload] = decodeAbiParameters(adapterCallParams, withdrawData(amount));
+    assert.equal(action, WITHDRAW);
+    assert.deepEqual(decodeAbiParameters([{ type: "uint256" }], payload), [amount]);
+    assert.equal(withdrawData(amount).slice(66), marginData(amount).slice(66), "same payload as a deposit");
   }
 });
 

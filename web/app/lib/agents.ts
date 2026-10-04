@@ -18,7 +18,7 @@ const HOUSE_AGENTS: Record<number, Record<string, House>> = {
     "1951": {
       name: "House agent 1 (old registry)",
       slug: "house-1-old",
-      strategy: "Replaced on 2026-10-04 by agent #2000, which runs the same momentum rule on the registry with the security fixes.",
+      strategy: "Replaced on 2026-10-04 by agent #2000, which runs the same momentum rule on the registry with the security fixes. It is winding down: it opens nothing new, closes its last position on the same rule, then returns its Perpl margin to the vault.",
     },
     "1976": { name: "CLI test agent" }, // ours: entered, traded and frozen by the CLI's testnet run (README, CLI)
   },

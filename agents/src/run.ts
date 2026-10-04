@@ -16,9 +16,10 @@ import {
   OPEN_SHORT,
   orderData,
   sellPrice,
+  withdrawData,
 } from "./perpl.ts";
 import { privySignTransaction } from "./privy.ts";
-import { askKimi, context, draw, momentum, ruleDecision } from "./strategy.ts";
+import { askKimi, context, draw, momentum, ruleDecision, windDownStep } from "./strategy.ts";
 import { checkOrder, checkProposal, checkQuote, dailyLossHeadroom, fmt, type Checked, type VaultView } from "./validate.ts";
 
 const GAS_HEADROOM_PCT = 105n; // estimate + 5%: Monad charges the whole gas limit
@@ -81,7 +82,30 @@ export async function runAgent(env: Env, cfg: Config, agent: HouseAgent) {
   let model = "rule";
   let prompt: unknown;
   let response: unknown;
-  if (obs.accountId === 0n) {
+  if (agent.windDown) {
+    // Close-only, decided in code: no model call, never an open (see windDownStep).
+    detail.windDown = true;
+    const step = windDownStep(m, obs.position.side, agent, obs.accountId === 0n ? 0n : obs.freeMargin, d, coin);
+    if (step.action === "hold") return log({ model, action: "hold", valid: true, reason: step.reason, detail });
+    if (step.action === "close") {
+      const reject = (error: string) => log({ model, action: "close", valid: false, reason: step.reason, error, detail });
+      const built = buildOrder({ action: "close", reason: step.reason }, obs, agent);
+      if ("error" in built) return reject(built.error);
+      const order = checkOrder(built.order, view);
+      if (!order.ok) return reject(order.error);
+      detail.order = order.value;
+      plan = { action: "close", reason: step.reason, data: built.data, intent: built.intent };
+    } else {
+      const amount = step.amount!;
+      plan = {
+        action: "withdraw_margin",
+        size: fmt(amount, d),
+        reason: step.reason,
+        data: withdrawData(amount),
+        intent: `move ${fmt(amount, d)} AUSD margin back to the vault`,
+      };
+    }
+  } else if (obs.accountId === 0n) {
     // No Perpl account yet: the first margin move opens it. A fixed step, not a model decision.
     const amount = obs.minOpen;
     if (amount > obs.idle || amount > obs.maxTradeNotional) {

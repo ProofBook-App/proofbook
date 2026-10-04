@@ -31,6 +31,16 @@ Each house agent has one fixed, public strategy (`strategy` in `HOUSE_AGENTS`). 
 
 Every agent trades `sizeAusd` at 1x, holds one position at most, and stays inside the vault's limits.
 
+### Winding an agent down
+
+Set `"windDown": true` on an agent in `HOUSE_AGENTS` to retire it without leaving a position behind. A wound-down agent never opens. It skips Kimi and decides in code (`windDownStep`):
+
+1. It holds an open position until the strategy's own close rule fires, then closes it. The exit follows the rule the agent traded on, not a judgement call.
+2. Once it is flat, it moves all free Perpl margin back to the vault (PerplAdapter `WITHDRAW`), where backers can withdraw it.
+3. After that it logs "Wound down" every run. Remove it from `HOUSE_AGENTS` then.
+
+House agent #1's first vault, #1951 on the old registry, is winding down this way, signed by its original Privy wallet.
+
 ## Commands
 
 ```bash

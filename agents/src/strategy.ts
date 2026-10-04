@@ -218,3 +218,39 @@ export function parseToolCall(out: Record<string, unknown>): Proposal {
   }
   return { action: name, sizeAusd: args.size_ausd, reason: args.reason };
 }
+
+/** A wind-down agent's step: what it does this run, decided in code (no model call). */
+export type WindDownStep = { action: "close" | "withdraw_margin" | "hold"; amount?: bigint; reason: string };
+
+const pct = (bps: number) => `${(bps / 100).toFixed(2).replace(/\.?0+$/, "")}%`;
+
+/**
+ * Close-only: never opens. An open position closes only when the strategy's own close rule fires
+ * (the same rule it traded on, so the exit isn't a discretionary call). Once flat, free Perpl margin
+ * goes back to the vault, where backers can withdraw it. Then it holds with nothing left to do.
+ */
+export function windDownStep(m: Momentum, side: Side, agent: HouseAgent, freeMargin: bigint, decimals: number, coin?: Draw): WindDownStep {
+  if (side !== "flat") {
+    const rule = ruleDecision(m, side, agent, coin);
+    if (rule.action === "close") {
+      const why = agent.strategy === "random" ? "the coin called a close" : `MON moved ${pct(m.changeBps!)} over ${agent.lookbackMinutes} minutes`;
+      return { action: "close", reason: `Winding down, and ${why}, the strategy's close rule, so the ${side} closes.` };
+    }
+    let wait: string;
+    if (agent.strategy === "random") wait = "the coin calls a close";
+    else {
+      const falls = (side === "long") === (agent.strategy === "momentum");
+      wait = `MON ${falls ? "falls" : "rises"} ${pct(agent.thresholdBps / 2)} over ${agent.lookbackMinutes} minutes, the strategy's close rule`;
+      wait += m.changeBps === undefined ? " (not enough price history yet)" : ` (it's ${pct(m.changeBps)} now)`;
+    }
+    return { action: "hold", reason: `Winding down, so no new trades. The ${side} stays open until ${wait}.` };
+  }
+  if (freeMargin > 0n) {
+    return {
+      action: "withdraw_margin",
+      amount: freeMargin,
+      reason: `Winding down with no position open, so ${fmt(freeMargin, decimals)} AUSD of free margin goes back to the vault.`,
+    };
+  }
+  return { action: "hold", reason: "Wound down: no position open and no margin left at Perpl, so there is nothing more to do." };
+}

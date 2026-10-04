@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HouseAgent } from "../src/config.ts";
-import { draw, momentum, parseToolCall, ruleDecision } from "../src/strategy.ts";
+import { loadConfig } from "../src/config.ts";
+import { draw, momentum, parseToolCall, ruleDecision, windDownStep } from "../src/strategy.ts";
 
 const agent: HouseAgent = {
   agentId: "1951",
@@ -100,4 +101,60 @@ test("the random control acts on roll 0 only, and its coin can be recomputed", (
   let acts = 0;
   for (let i = 0; i < 6000; i++) if (draw("1990", i * 300).roll === 0) acts++;
   assert.ok(acts > 850 && acts < 1150, `acts ${acts}`);
+});
+
+// ---- wind-down: close-only, then margin back to the vault
+const winding: HouseAgent = { ...agent, windDown: true };
+
+test("wind-down never opens, even on a signal the strategy would trade", () => {
+  const up = momentum({ at: T, mark: 2_727n }, samples([2_700n, 2_700n, 2_700n, 2_700n, 2_700n, 2_700n]), 30);
+  assert.deepEqual(ruleDecision(up, "flat", agent), { action: "open_long", sizeAusd: 25 });
+  const step = windDownStep(up, "flat", winding, 0n, 6);
+  assert.equal(step.action, "hold");
+  assert.match(step.reason, /nothing more to do/);
+});
+
+test("wind-down holds an open long until the close rule fires, then closes it", () => {
+  const up = momentum({ at: T, mark: 2_727n }, samples([2_700n, 2_700n, 2_700n, 2_700n, 2_700n, 2_700n]), 30);
+  const hold = windDownStep(up, "long", winding, 80_000_000n, 6);
+  assert.equal(hold.action, "hold");
+  assert.equal(hold.reason, "Winding down, so no new trades. The long stays open until MON falls 0.5% over 30 minutes, the strategy's close rule (it's 1% now).");
+
+  const dip = momentum({ at: T, mark: 2_686n }, samples([2_700n, 2_700n, 2_700n, 2_700n]), 30);
+  const close = windDownStep(dip, "long", winding, 80_000_000n, 6);
+  assert.equal(close.action, "close");
+  assert.equal(close.reason, "Winding down, and MON moved -0.51% over 30 minutes, the strategy's close rule, so the long closes.");
+});
+
+test("wind-down without enough history keeps the position and says why", () => {
+  const m = momentum({ at: T, mark: 2_700n }, [], 30);
+  const step = windDownStep(m, "short", winding, 0n, 6);
+  assert.equal(step.action, "hold");
+  assert.match(step.reason, /The short stays open until MON rises 0\.5% .*not enough price history/);
+});
+
+test("wind-down recalls all free margin once flat, then has nothing left to do", () => {
+  const m = momentum({ at: T, mark: 2_700n }, [], 30);
+  const recall = windDownStep(m, "flat", winding, 80_123_456n, 6);
+  assert.deepEqual(recall, {
+    action: "withdraw_margin",
+    amount: 80_123_456n,
+    reason: "Winding down with no position open, so 80.123456 AUSD of free margin goes back to the vault.",
+  });
+  assert.equal(windDownStep(m, "flat", winding, 0n, 6).action, "hold");
+});
+
+test("wind-down on mean reversion waits for its own close direction", () => {
+  const mr: HouseAgent = { ...winding, strategy: "mean-reversion" };
+  const m = momentum({ at: T, mark: 2_700n }, [], 30);
+  assert.match(windDownStep(m, "long", mr, 0n, 6).reason, /MON rises 0\.5%/);
+});
+
+test("the windDown flag is read only when it is literally true", () => {
+  const raw = { agentId: "1951", label: "x", vault: agent.vault, adapter: agent.adapter, perpId: "64", sizeAusd: 25, maxSizeAusd: 50, thresholdBps: 100, lookbackMinutes: 30 };
+  const env = (agents: unknown[]) => ({ MODE: "dry-run", CHAIN_ID: "10143", HOUSE_AGENTS: agents, RPC_URL: "x", EXPLORER: "x", MODEL: "m" }) as unknown as Env;
+  const [on, off, str] = loadConfig(env([{ ...raw, windDown: true }, raw, { ...raw, windDown: "true" }])).agents;
+  assert.equal(on!.windDown, true);
+  assert.equal(off!.windDown, false);
+  assert.equal(str!.windDown, false);
 });

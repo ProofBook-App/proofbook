@@ -42,6 +42,20 @@
 				"lookbackMinutes": 30,
 				"privyWalletId": "lydln2qshp11rpj5rpwdcm0r",
 				"privyWalletAddress": "0x6F50C3D365dD5979fbA9dF89665f154c0C36c181"
+			},
+			{
+				"agentId": "1951",
+				"label": "House agent #1, old registry (winding down)",
+				"vault": "0x98e2af31848B95d751e3BFD5bAB9E5EAB9122B53",
+				"adapter": "0x583B6bCFcAec599E6Fc09e27db581d6abe7baB09",
+				"perpId": "64",
+				"sizeAusd": "25",
+				"maxSizeAusd": "50",
+				"thresholdBps": 100,
+				"lookbackMinutes": 30,
+				"privyWalletId": "wnv9gal23ndaqtce5l0kgz2i",
+				"privyWalletAddress": "0x552874909A030344fC5eBB4E29A935E2bEe8B082",
+				"windDown": true
 			}
 		]
 	}
