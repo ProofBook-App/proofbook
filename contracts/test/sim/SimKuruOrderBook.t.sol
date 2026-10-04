@@ -141,7 +141,13 @@ contract SimKuruOrderBookTest is Test {
         assets[0] = IERC20(address(usdc));
         // The Kuru adapter's reference is the Perpl MON perp; here the mock source stands in for it.
         AdapterFactory factory = new AdapterFactory(
-            IPerplExchange(address(0)), IERC20(address(0)), book, IERC20(address(usdc)), IPerplExchange(address(source)), MON, 10_000e6
+            IPerplExchange(address(0)),
+            IERC20(address(0)),
+            book,
+            IERC20(address(usdc)),
+            IPerplExchange(address(source)),
+            MON,
+            10_000e6
         );
         AgentRegistry registry = new AgentRegistry(identity, makeAddr("guardian"), assets, factory);
         factory.setRegistry(address(registry));

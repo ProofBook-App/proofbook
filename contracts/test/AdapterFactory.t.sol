@@ -196,7 +196,13 @@ contract AdapterFactoryTest is Test {
 
     function test_setRegistry_onceAndOnlyByTheDeployer() public {
         AdapterFactory f = new AdapterFactory(
-            IPerplExchange(address(ex)), IERC20(address(token)), IKuruOrderBook(address(0)), IERC20(address(0)), IPerplExchange(address(0)), 0, 0
+            IPerplExchange(address(ex)),
+            IERC20(address(token)),
+            IKuruOrderBook(address(0)),
+            IERC20(address(0)),
+            IPerplExchange(address(0)),
+            0,
+            0
         );
         vm.prank(attacker);
         vm.expectRevert(abi.encodeWithSelector(AdapterFactory.NotDeployer.selector, attacker));
@@ -271,7 +277,8 @@ contract AdapterFactoryTest is Test {
     }
 
     function _envelope(address[] memory venues) internal pure returns (RiskEnvelope memory) {
-        return RiskEnvelope({maxTradeNotional: CAP, dailyLossCapBps: 1_000, depositCapPerBacker: 10_000e6, venues: venues});
+        return
+            RiskEnvelope({maxTradeNotional: CAP, dailyLossCapBps: 1_000, depositCapPerBacker: 10_000e6, venues: venues});
     }
 
     function _deposit(AgentVault vault, address backer, uint256 amount) internal {

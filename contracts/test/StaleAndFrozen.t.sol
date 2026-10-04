@@ -133,7 +133,13 @@ contract AdapterReliabilityTest is Test {
 
         identity = new MockIdentityRegistry();
         factory = new AdapterFactory(
-            IPerplExchange(address(ex)), ausd, IKuruOrderBook(address(book)), usdc, IPerplExchange(address(source)), KURU_MON, 10_000e6
+            IPerplExchange(address(ex)),
+            ausd,
+            IKuruOrderBook(address(book)),
+            usdc,
+            IPerplExchange(address(source)),
+            KURU_MON,
+            10_000e6
         );
         IERC20[] memory assets = new IERC20[](2);
         assets[0] = ausd;
@@ -272,7 +278,9 @@ contract AdapterReliabilityTest is Test {
         return AgentVault(
             payable(registry.enter(
                     identity.register(),
-                    RiskEnvelope({maxTradeNotional: 300e6, dailyLossCapBps: 1_000, depositCapPerBacker: 10_000e6, venues: venues}),
+                    RiskEnvelope({
+                        maxTradeNotional: 300e6, dailyLossCapBps: 1_000, depositCapPerBacker: 10_000e6, venues: venues
+                    }),
                     sessionKey,
                     asset
                 ))
