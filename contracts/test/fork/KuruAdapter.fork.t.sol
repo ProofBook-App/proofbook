@@ -20,10 +20,14 @@ interface IKuruMarginAccount {
 
 interface IKuruLimit {
     function addBuyOrder(uint32 price, uint96 size, bool postOnly) external;
+    function addSellOrder(uint32 price, uint96 size, bool postOnly) external;
 }
 
 /// @notice KuruAdapter against the live Kuru MON-USDC book, real USDC and Perpl's MON oracle on a
 /// Monad mainnet fork. Local simulation only: nothing is broadcast.
+/// The live book is thin (on 2026-10-04 a 200 USDC buy moved the price more than the 3% band), so
+/// setUp rests a maker's bid and ask at the current top of book. The tests then exercise the real
+/// Kuru contracts at today's price without depending on how much depth happens to be there.
 /// Run: forge test --match-path 'test/fork/*' (uses $MONAD_RPC_URL, else the public RPC).
 contract KuruAdapterForkTest is Test {
     IKuruOrderBook constant MON_USDC = IKuruOrderBook(0x065C9d28E428A0db40191a54d33d5b7c71a9C394);
@@ -49,6 +53,7 @@ contract KuruAdapterForkTest is Test {
 
     function setUp() public {
         vm.createSelectFork(vm.envOr("MONAD_RPC_URL", string("https://rpc.monad.xyz")));
+        _seedBook();
 
         MockIdentityRegistry identity = new MockIdentityRegistry();
         IERC20[] memory assets = new IERC20[](1);
@@ -85,6 +90,31 @@ contract KuruAdapterForkTest is Test {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    uint256 constant SEED_MON = 200_000; // per side, about $7k at $0.034
+
+    /// A maker rests SEED_MON on each side at the current best bid and ask (post-only, so it adds
+    /// depth without moving the top of book). Kuru prices are 1e8-scaled; sizes are 1e10 per MON.
+    function _seedBook() internal {
+        (uint256 bid, uint256 ask) = MON_USDC.bestBidAsk();
+        uint32 bidPrice = uint32(bid * 1e8 / 1e18);
+        uint32 askPrice = uint32(ask * 1e8 / 1e18);
+        address maker = makeAddr("maker");
+        vm.deal(maker, SEED_MON * 1 ether);
+        deal(address(USDC), maker, SEED_MON * bid / 1e12 + 1e6);
+
+        vm.startPrank(maker);
+        USDC.approve(address(MARGIN), type(uint256).max);
+        MARGIN.deposit{value: SEED_MON * 1 ether}(maker, address(0), SEED_MON * 1 ether);
+        MARGIN.deposit(maker, address(USDC), USDC.balanceOf(maker));
+        IKuruLimit(address(MON_USDC)).addSellOrder(askPrice, uint96(SEED_MON * 1e10), true);
+        IKuruLimit(address(MON_USDC)).addBuyOrder(bidPrice, uint96(SEED_MON * 1e10), true);
+        vm.stopPrank();
+
+        (uint256 bid2, uint256 ask2) = MON_USDC.bestBidAsk();
+        assertEq(bid2, bid, "seed doesn't move the bid");
+        assertEq(ask2, ask, "seed doesn't move the ask");
+    }
 
     function _buy(uint256 quoteAmount) internal {
         vm.prank(sessionKey);
