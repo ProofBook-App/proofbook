@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {AgentVault} from "./AgentVault.sol";
 import {IAdapterFactory} from "./interfaces/IAdapterFactory.sol";
@@ -14,9 +15,13 @@ import {IIdentityRegistry} from "./interfaces/IIdentityRegistry.sol";
 /// (register() mints to msg.sender), then call enter(). Every venue must be an adapter the
 /// AdapterFactory deployed; enter() binds them to the new vault. UNAUDITED.
 contract AgentRegistry is IAgentRegistry {
-    uint256 internal constant BPS = 10_000;
     /// @dev NAV sums every venue's exposure, so the venue list stays short.
     uint256 public constant MAX_VENUES = 8;
+    /// @notice Highest daily-loss cap an envelope may set. At 10,000 the floor was 0 and the vault
+    /// could never freeze; anything near it is the same in practice (security review L7).
+    uint16 public constant MAX_DAILY_LOSS_BPS = 5_000;
+    /// @notice Highest maxTradeNotional, in whole units of the vault asset (1,000,000 AUSD or USDC).
+    uint256 public constant MAX_TRADE_UNITS = 1_000_000;
 
     IIdentityRegistry public immutable identity;
     address public immutable guardian;
@@ -50,7 +55,7 @@ contract AgentRegistry is IAgentRegistry {
         if (identity.ownerOf(agentId) != msg.sender) revert NotAgentOwner(agentId, msg.sender);
         if (vaultOf[agentId] != address(0)) revert AlreadyEntered(agentId);
         if (!isAllowedAsset[asset]) revert AssetNotAllowed(address(asset));
-        _validate(envelope);
+        _validate(envelope, asset);
 
         _envelopes[agentId] = envelope;
         string memory id = Strings.toString(agentId);
@@ -87,10 +92,12 @@ contract AgentRegistry is IAgentRegistry {
         return identity.ownerOf(agentId);
     }
 
-    function _validate(RiskEnvelope calldata envelope) internal view {
+    function _validate(RiskEnvelope calldata envelope, IERC20 asset) internal view {
         if (
             envelope.maxTradeNotional == 0 || envelope.depositCapPerBacker == 0 || envelope.dailyLossCapBps == 0
-                || envelope.dailyLossCapBps > BPS || envelope.venues.length == 0 || envelope.venues.length > MAX_VENUES
+                || envelope.dailyLossCapBps > MAX_DAILY_LOSS_BPS || envelope.venues.length == 0
+                || envelope.venues.length > MAX_VENUES
+                || envelope.maxTradeNotional > MAX_TRADE_UNITS * 10 ** IERC20Metadata(address(asset)).decimals()
         ) revert InvalidEnvelope();
         for (uint256 i; i < envelope.venues.length; ++i) {
             if (envelope.venues[i] == address(0)) revert InvalidEnvelope();

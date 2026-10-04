@@ -82,9 +82,6 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
         highWaterMark = PRICE_SCALE / 10 ** DECIMALS_OFFSET; // 1 asset unit per 10^offset shares
     }
 
-    /// @dev Kuru MON markets settle in native MON.
-    receive() external payable {}
-
     // ------------------------------------------------------------------ trading
 
     /// @inheritdoc IAgentVault
@@ -301,6 +298,17 @@ contract AgentVault is ERC4626, ReentrancyGuard, IAgentVault {
 
     function _decimalsOffset() internal pure override returns (uint8) {
         return DECIMALS_OFFSET;
+    }
+
+    /// @dev Share transfers count against the receiver's cap too, so a transfer can't take a backer
+    /// past it (security review L1). Mints and burns are checked in deposit/mint and need no cap.
+    /// A frozen vault still allows transfers. Splitting across addresses is not something a vault
+    /// can stop: the cap limits one address, not one person.
+    function _update(address from, address to, uint256 value) internal override {
+        super._update(from, to, value);
+        if (from == address(0) || to == address(0) || from == to) return;
+        uint256 held = _convertToAssets(balanceOf(to), Math.Rounding.Ceil);
+        if (held > depositCapPerBacker) revert DepositCapExceeded(to, held, depositCapPerBacker);
     }
 
     function _checkCap(address receiver, uint256 assets) internal view {

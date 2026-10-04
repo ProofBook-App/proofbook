@@ -28,7 +28,8 @@ import {VaultBoundAdapter} from "./VaultBoundAdapter.sol";
 ///
 /// Price band: open and close orders must carry a limit within BAND_BPS of Perpl's mark (buys at
 /// most mark + 3%, sells at least mark - 3%). The limit bounds the worst fill, so a compromised
-/// session key cannot trade the vault into a counterparty's off-market order.
+/// session key cannot trade the vault into a counterparty's off-market order. The mark must be at
+/// most MAX_MARK_AGE old, or a stale mark could put the band in the wrong place (security review L5).
 contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     using SafeERC20 for IERC20;
 
@@ -44,6 +45,9 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     /// @notice Every open and close order must expire within this many blocks (about 30 minutes at
     /// 300 ms), so nothing rests on the book for long after a freeze (security review H2).
     uint256 public constant MAX_ORDER_BLOCKS = 6_000;
+    /// @notice Oldest mark an order's price band may be checked against. Perpl refreshes it every
+    /// minute or so on mainnet and testnet (measured 2026-10-04).
+    uint256 public constant MAX_MARK_AGE = 5 minutes;
     uint256 internal constant BPS = 10_000;
 
     IPerplExchange public immutable exchange;
@@ -80,6 +84,7 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
     error PriceOutsideBand(uint256 limitPNS, uint256 markPNS);
     error TooManyPerps(uint256 perpId);
     error OrderExpiryTooFar(uint256 expiryBlock, uint256 latest);
+    error StaleMark(uint256 perpId, uint256 markTimestamp);
 
     constructor(IPerplExchange exchange_, IERC20 collateral_) VaultBoundAdapter(collateral_) {
         (,,, uint256 decimals, address token,) = exchange_.getExchangeInfo();
@@ -196,6 +201,9 @@ contract PerplAdapter is VaultBoundAdapter, IVenueAdapter {
         uint256 latest = block.number + MAX_ORDER_BLOCKS;
         if (d.expiryBlock == 0 || d.expiryBlock > latest) revert OrderExpiryTooFar(d.expiryBlock, latest);
         IPerplExchange.PerpetualInfo memory p = exchange.getPerpetualInfo(d.perpId);
+        if (p.markPNS == 0 || block.timestamp > p.markTimestamp + MAX_MARK_AGE) {
+            revert StaleMark(d.perpId, p.markTimestamp);
+        }
         bool isBuy = d.orderType == OPEN_LONG || d.orderType == CLOSE_SHORT;
         if (isBuy ? d.pricePNS * BPS > p.markPNS * (BPS + BAND_BPS) : d.pricePNS * BPS < p.markPNS * (BPS - BAND_BPS)) {
             revert PriceOutsideBand(d.pricePNS, p.markPNS);

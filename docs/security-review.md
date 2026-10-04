@@ -50,14 +50,19 @@ C1 was confirmed by hand afterwards (`AgentRegistry._validate` and `AgentVault.e
 ## Low
 
 - **L1.** The deposit cap is per address. Shares are transferable, so two addresses or a share transfer get around it.
+  - **Fix drafted, not deployed (2026-10-04):** a share transfer (or transferFrom) reverts with `DepositCapExceeded` if it would take the receiver's position past the cap. Transfers still work while frozen, and the sender's size doesn't matter. Two addresses still get around it: a vault can limit an address, not a person. Tests: `test/LowFindings.t.sol`.
 - **L2.** A withdrawal after an intraday gain lowers `dayStartNav` by the absolute amount (`AgentVault.sol:307-309`). Example: start 1,000, NAV 2,000, withdraw 999: the floor drops to 0.9. Fix: scale it proportionally.
   - **Fix drafted, not deployed (2026-10-03):** a withdrawal (and a paid fee) scales `dayStartNav` by the share of NAV that stayed, so the day's gain or loss in percent doesn't change. In the review's case the baseline becomes 450.5 instead of 0. It also stops a withdrawal during a loss from making the loss look bigger (down 5% stayed 5%, where subtracting made it 9.5%). While a venue can't be priced NAV reads low, so it falls back to subtracting. Deposits still add the amount. Tests: `test/BaselineAndEntry.t.sol`.
 - **L3.** Anyone can crystallise the fee at a mark peak with `withdraw(0, x, x)`.
+  - **Not fixed: needs a fee-model decision.** Every deposit and withdrawal crystallises the whole fee, and `test_Inv6_feeNeverChargedTwiceOnSameProfit` expects exactly that. Skipping zero-amount flows wouldn't help, since a 1-wei deposit does the same. Real fixes change that expectation: (a) a withdrawal pays only the leaving shares' share of the fee, deposits average the high-water mark, and the full fee crystallises only when the vault is flat; or (b) crystallise at most once per period. Mitigations today: Kuru MON is marked at or below the reference, and the high-water mark stops the same gain being charged twice.
 - **L4.** An approved ERC-721 operator can `enter` someone else's identity first, with an envelope nobody can change (`AgentRegistry.sol:41`). Require `ownerOf == msg.sender`.
   - **Fix drafted, not deployed (2026-10-03):** `enter` requires `identity.ownerOf(agentId) == msg.sender`; approved addresses and operators get `NotAgentOwner`. Tests: `test/BaselineAndEntry.t.sol`.
 - **L5.** Perpl orders check the 3% band against a mark with no freshness check (`PerplAdapter.sol:169-173`).
+  - **Fix drafted, not deployed (2026-10-04):** open and close orders revert with `StaleMark` when Perpl's mark is 0 or more than `MAX_MARK_AGE` (5 minutes) old. On 2026-10-04 the mark was at most about a minute old on mainnet and testnet. Cancels, deposits and withdrawals don't check it. Tests: `test/StaleAndFrozen.t.sol`.
 - **L6.** The vault's `receive()` (`AgentVault.sol:86`) isn't needed, and MON sent to it is stuck.
+  - **Fix drafted, not deployed (2026-10-04):** removed. KuruAdapter holds the MON and returns only the vault asset, so the vault never receives MON. Tests: `test/LowFindings.t.sol`.
 - **L7.** `dailyLossCapBps = 10000` is accepted (a floor of 0, so no freeze), and `maxTradeNotional` has no upper bound.
+  - **Fix drafted, not deployed (2026-10-04):** `enter` rejects a daily-loss cap above `MAX_DAILY_LOSS_BPS` (50%) and a `maxTradeNotional` above `MAX_TRADE_UNITS` (1,000,000 whole units of the vault asset). Both limits are judgment calls; the house agents and the CLI default use 10%. Tests: `test/LowFindings.t.sol`.
 
 ## Info
 

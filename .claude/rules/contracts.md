@@ -18,7 +18,7 @@ paths:
 - **Kuru:**
   - Funds must sit in the Kuru MarginAccount before a limit order is placed.
   - Use the SDK ABI, not docs.kuru.io. `minAmountOut` is uint256. `addBuyOrder`/`addSellOrder` return nothing, so get orderIds from `OrderCreated`.
-  - MON-AUSD's base is native MON, so the vault needs `receive()`.
+  - MON-AUSD's base is native MON. KuruAdapter holds it (it has `receive()`); the vault doesn't accept MON (security review L6).
   - Details: `docs/reference/kuru.md`.
 - **NAV** = vault balances + MarginAccount balances + funds locked in resting orders + positions at a *conservative* mark.
   - The Kuru mid can be manipulated. Test daily-loss freezing under a manipulated mid.

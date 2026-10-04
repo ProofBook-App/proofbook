@@ -257,6 +257,49 @@ contract AdapterReliabilityTest is Test {
         adapter.cancel(PERPL_MON, 42);
     }
 
+    // ------------------------------------------------------------------ L5: the band needs a fresh mark
+
+    function test_L5_anOrderAgainstAStaleMarkReverts() public {
+        (AgentVault vault, PerplAdapter adapter) = _perplVault();
+        uint256 markedAt = block.timestamp;
+        vm.warp(markedAt + adapter.MAX_MARK_AGE() + 1);
+        vm.roll(block.number + 1);
+
+        IPerplExchange.OrderDesc memory d = _order(OPEN_LONG, block.number + 1_000);
+        vm.prank(sessionKey);
+        vm.expectRevert(abi.encodeWithSelector(PerplAdapter.StaleMark.selector, PERPL_MON, markedAt));
+        vault.execute(address(adapter), abi.encode(ORDER, abi.encode(d)));
+
+        source.setMark(PERPL_MON, 2766); // the mark refreshes
+        vm.prank(sessionKey);
+        vault.execute(address(adapter), abi.encode(ORDER, abi.encode(d)));
+    }
+
+    function test_L5_aMarkExactlyAtTheLimitStillCounts() public {
+        (AgentVault vault, PerplAdapter adapter) = _perplVault();
+        vm.warp(block.timestamp + adapter.MAX_MARK_AGE());
+        IPerplExchange.OrderDesc memory d = _order(OPEN_LONG, block.number + 1_000);
+        vm.prank(sessionKey);
+        vault.execute(address(adapter), abi.encode(ORDER, abi.encode(d)));
+    }
+
+    /// Cancels and margin moves don't use the band, so a stale mark doesn't block them.
+    function test_L5_cancelsAndWithdrawalsIgnoreTheMark() public {
+        (AgentVault vault, PerplAdapter adapter) = _perplVault();
+        vm.warp(block.timestamp + 1 hours);
+
+        IPerplExchange.OrderDesc memory d;
+        d.perpId = PERPL_MON;
+        d.orderType = CANCEL;
+        d.orderId = 7;
+        assertEq(adapter.quoteNotional(abi.encode(ORDER, abi.encode(d))), 0);
+
+        uint256 idle = ausd.balanceOf(address(vault));
+        vm.prank(sessionKey);
+        vault.execute(address(adapter), abi.encode(uint8(1), abi.encode(uint256(50e6)))); // WITHDRAW
+        assertEq(ausd.balanceOf(address(vault)), idle + 50e6);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /// @dev A Perpl vault with 1,000 deposited and a Perpl account holding 100 of margin.
